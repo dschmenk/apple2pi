@@ -379,7 +379,7 @@ void sendrelxy(int fd, int x, int y)
 void prlog(char *str)
 {
         if (!isdaemon)
-                fprintf(stderr, str);
+                printf(str);
 }
 void main(int argc, char **argv)
 {
@@ -389,6 +389,39 @@ void main(int argc, char **argv)
         int i, lastbtn;
         int a2fd, kbdfd, moufd;
 
+        /*
+         * Are we running as a isdaemon?
+         */
+        if ((argc > 1)/* && (strcmp(argv[1], "--daemon") == 8)*/)
+        {
+                pid_t pid, sid; /* our process ID and Session ID */
+                
+                pid = fork();   /* fork off the parent process */
+                if (pid < 0)
+                        die("a2pid: fork() failure");
+                /*
+                 * If we got a good PID, then
+                 * we can exit the parent process
+                 */
+                if (pid > 0)
+                        exit(EXIT_SUCCESS);
+                umask(0);       /* change the file mode mask */
+                /*
+                 * Open any logs here
+                 */
+                sid = setsid(); /* create a new SID for the child process */
+                if (sid < 0)
+                        die("a2pid: setsid() failure");
+                if ((chdir("/")) < 0)   /* change the current working directory */
+                        die("a2pid: chdir() failure");
+                /*
+                 * Close out the standard file descriptors
+                 */
+                close(STDIN_FILENO);
+                close(STDOUT_FILENO);
+                close(STDERR_FILENO);
+                isdaemon = TRUE;
+        }
         /*
          * Create keyboard input device
          */
@@ -487,42 +520,10 @@ void main(int argc, char **argv)
                         prlog("a2pid: Connected.\n");
                         a2event[0] = 0x81;  /* acknowledge */
                         write(a2fd, a2event, 1);
+                        tcflush(a2fd, TCIFLUSH);
                 }
                 else
                         stop = TRUE;
-        }
-        /*
-         * Are we running as a isdaemon?
-         */
-        if ((argc > 1)/* && (strcmp(argv[1], "--daemon") == 8)*/)
-        {
-                pid_t pid, sid; /* our process ID and Session ID */
-                
-                pid = fork();   /* fork off the parent process */
-                if (pid < 0)
-                        die("a2pid: fork() failure");
-                /*
-                 * If we got a good PID, then
-                 * we can exit the parent process
-                 */
-                if (pid > 0)
-                        exit(EXIT_SUCCESS);
-                umask(0);       /* change the file mode mask */
-                /*
-                 * Open any logs here
-                 */
-                sid = setsid(); /* create a new SID for the child process */
-                if (sid < 0)
-                        die("a2pid: setsid() failure");
-                if ((chdir("/")) < 0)   /* change the current working directory */
-                        die("a2pid: chdir() failure");
-                /*
-                 * Close out the standard file descriptors
-                 */
-                close(STDIN_FILENO);
-                close(STDOUT_FILENO);
-                close(STDERR_FILENO);
-                isdaemon = TRUE;
         }
         /*
          * Event loop
@@ -531,6 +532,7 @@ void main(int argc, char **argv)
         {
                 if (read(a2fd, a2event, 3) == 3)
                 {
+                        // printf("a2pi: [0x%02X] [0x%02X] [0x%02X] ", a2event[0], a2event[1], a2event[2]);
                         switch (a2event[0])
                         {
                                 case 0x80: /* sync */
