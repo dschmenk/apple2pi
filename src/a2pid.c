@@ -390,7 +390,7 @@ void main(int argc, char **argv)
         int a2fd, kbdfd, moufd;
 
         /*
-         * Are we running as a isdaemon?
+         * Are we running as a daemon?
          */
         if ((argc > 1) && (strcmp(argv[1], "--daemon") == 0))
         {
