@@ -11,9 +11,9 @@ Installing and configuring the Apple II:  You will need an Apple //c or Apple //
 Installing and configuring the Raspberry Pi:  Download the a2pid.c to your Raspberry Pi.  Compile the daemon with 'cc a2pid.c -o a2pid' and copy the result with 'sudo cp a2pid /usr/bin'.  You will need to disable the Raspbain serial login by editing /etc/inittab and commenting out the line (probably at the very bottom) that looks like:
 T0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100
 To run the a2pid daemon automatically at boot time, edit /etc/rc.local and add:
-a2pid --daemon
+"a2pid --daemon"
 right beforw the line:
-exit 0
+"exit 0"
 followed by rebooting the Raspberry Pi.
 
 Reboot the Apple II with the newly created floppy in the start-up drive.  If everything is configured correctly, you should be able to login to the Raspberry Pi with your Apple II keyboard.  If you have an Apple II Mouse, that should control the cursor in X, or in the console if you have gdm installed.
