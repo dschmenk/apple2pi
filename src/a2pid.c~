@@ -392,7 +392,9 @@ void main(int argc, char **argv)
         /*
          * Are we running as a daemon?
          */
-        if ((argc > 1) && (strcmp(argv[1], "--daemon") == 0))
+        if (argc > 1)
+               printf("strcmp == %d\n", strcmp(argv[1], "--daemon"));
+        if ((argc > 1) && (strcmp(argv[1], "--daemon") == 8))
         {
                 pid_t pid, sid; /* our process ID and Session ID */
                 
