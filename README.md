@@ -17,19 +17,10 @@ T0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100
 To adjust the NTSC output so it fits nicely on my //c monitor, I edited the setting in /boot/config.txt such that:
 
 <code>
-overscan_left=26
-</code>
-
-<code>
-overscan_right=-8
-</code>
-
-<code>
-overscan_top=-8
-</code>
-
-<code>
-\#overscan_bottom=16<nl>
+overscan_left=26<br>
+overscan_right=-8<br>
+overscan_top=-8<br>
+\#overscan_bottom=16<br>
 </code>
 
 To run the a2pid daemon automatically at boot time, edit /etc/rc.local and add:
