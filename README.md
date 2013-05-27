@@ -14,7 +14,7 @@ Installing and configuring the Raspberry Pi:  Download the a2pid.c to your Raspb
 T0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100
 </code>
 
-To adjust the NTSC output so it fits nicely on my //c monitor, I adjusted the setting in /boot/config.txt such that:
+To adjust the NTSC output so it fits nicely on my //c monitor, I edited the setting in /boot/config.txt such that:
 
 <code>
 overscan_left=26
@@ -38,7 +38,7 @@ To run the a2pid daemon automatically at boot time, edit /etc/rc.local and add:
 a2pid --daemon
 </code>
 
-right beforw the line:
+right before the line:
 
 <code>
 exit 0
