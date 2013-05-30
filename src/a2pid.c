@@ -1,10 +1,15 @@
+/*
+ * Copyright 2013, David Schmenk
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <termios.h>
 #include <string.h>
+#include <netinet/in.h>
 #include <sys/types.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <linux/input.h>
 #include <linux/uinput.h>
@@ -24,6 +29,15 @@
 #define MOD_ALT         0x40
 #define MOD_CTRL        0x8000
 #define MOD_SHIFT       0x4000
+
+struct a2request {
+        int  fd;
+        int  type;
+        int  addr;
+        int  count;
+        char *buffer;
+        struct a2request *next;
+} *a2reqlist = NULL, *a2reqfree = NULL;
 
 int scancode[256] = {
         /*
@@ -376,18 +390,106 @@ void sendrelxy(int fd, int x, int y)
         write(fd, &evrely, sizeof(evrely));
         write(fd, &evsync, sizeof(evsync));
 }
+int writeword(int fd, int word, char ack)
+{
+        char rwchar;
+        
+        rwchar = word;  /* send low byte of word */
+        write(fd, &rwchar, 1);
+        if ((read(fd, &rwchar, 1) == 1) && (rwchar == ack))      /* receive ack */
+        {
+                rwchar = word >> 8;  /* send high byte of word */
+                write(fd, &rwchar, 1);
+                if ((read(fd, &rwchar, 1) == 1) && (rwchar == ack))      /* receive ack */
+                        return TRUE;
+        }
+        return FALSE;
+}
 void prlog(char *str)
 {
         if (!isdaemon)
                 printf(str);
 }
+struct a2request *addreq(int a2fd, int reqfd, int type, int addr, int count, char *buffer)
+{
+        char rwchar;
+        struct a2request *a2req = a2reqfree;
+        if (a2req == NULL)
+                a2req = malloc(sizeof(struct a2request));
+        else
+                a2reqfree = a2reqfree->next;
+        a2req->fd     = reqfd;
+        a2req->type   = type;
+        a2req->addr   = addr;
+        a2req->count  = count;
+        a2req->buffer = buffer;
+        a2req->next   = NULL;
+        if (a2reqlist == NULL)
+        {
+                /*
+                 * Initiate request.
+                 */
+                a2reqlist = a2req;
+                rwchar    = a2req->type;
+                write(a2fd, &rwchar, 1);
+        }
+        else
+        {
+                /*
+                 * Add to end of request list.
+                 */
+                struct a2request *a2reqnext = a2reqlist;
+                while (a2reqnext->next != NULL)
+                        a2reqnext = a2reqnext->next;
+                a2reqnext->next = a2req;
+        }
+        return a2req;
+}
+void finreq(int a2fd, int status, int result)
+{
+        char finbuf[2];
+        struct a2request *a2req = a2reqlist;
+        printf("a2pid: finish request [0x%02X] [0x%02X]\n", status, result);
+        if (a2req->next)
+        {
+                /*
+                 * Initiate next request.
+                 */
+                finbuf[0] = a2req->next->type;
+                write(a2fd, finbuf, 1);
+        }
+        /*
+         * Send result to socket.
+         */
+        if (a2req->fd)
+        {
+                if (a2req->type == 0x90) /* read bytes */
+                        write(a2req->fd, a2req->buffer, a2req->count);
+                finbuf[0] = status;
+                finbuf[1] = result;
+                write(a2req->fd, finbuf, 2);
+        }
+        if (a2req->buffer)
+        {
+                free(a2req->buffer);
+                a2req->buffer = NULL;
+        }
+        /*
+         * Update lists.
+         */
+        a2reqlist   = a2req->next;
+        a2req->next = a2reqfree;
+        a2reqfree   = a2req;
+}
 void main(int argc, char **argv)
 {
         struct uinput_user_dev uidev;
         struct termios oldtio,newtio;
-        char a2event[4];
+        char a2buf[16];
         int i, lastbtn;
-        int a2fd, kbdfd, moufd;
+        int a2fd, kbdfd, moufd, srvfd, reqfd, maxfd;
+        struct sockaddr_in servaddr;
+        fd_set readset, openset;
 
         /*
          * Are we running as a daemon?
@@ -494,7 +596,7 @@ void main(int argc, char **argv)
          evrely.code = REL_Y;
          evsync.type = EV_SYN;
         /*
-         * Open serial port
+         * Open serial port.
          */
         prlog("a2pid: Open serial port\n");
         a2fd = open(A2DEVICE, O_RDWR | O_NOCTTY);
@@ -513,59 +615,237 @@ void main(int argc, char **argv)
         tcflush(a2fd, TCIFLUSH);
         newtio.c_cc[VMIN]  = 3; /* blocking read until 3 chars received */
         tcsetattr(a2fd, TCSANOW, &newtio);
-        if (read(a2fd, a2event, 1) == 1)
+        if (read(a2fd, a2buf, 1) == 1)
         {
-                if (a2event[0] == 0x80)     /* receive sync */
+                if (a2buf[0] == 0x80)     /* receive sync */
                 {
                         prlog("a2pid: Connected.\n");
-                        a2event[0] = 0x81;  /* acknowledge */
-                        write(a2fd, a2event, 1);
+                        a2buf[0] = 0x81;  /* acknowledge */
+                        write(a2fd, a2buf, 1);
                         tcflush(a2fd, TCIFLUSH);
                 }
                 else
                         stop = TRUE;
         }
         /*
+         * Open socket.
+         */
+        prlog("a2pid: Open server socket\n");
+        bzero(&servaddr, sizeof(servaddr));
+        servaddr.sin_family      = AF_INET;
+        servaddr.sin_port        = htons(6502);
+        servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+        srvfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (srvfd < 0)
+                die("error: socket create");
+        if (bind(srvfd,(struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+                die("error: bind socket");
+        if (listen(srvfd, 1) < 0)
+                die("error: listen socket");
+        reqfd = 0;
+        FD_ZERO(&openset);
+        FD_SET(a2fd,  &openset);
+        FD_SET(srvfd, &openset);
+        maxfd = a2fd > srvfd ? a2fd : srvfd;
+        /*
          * Event loop
          */
+        prlog("a2pid: Enter event loop\n");
         while (!stop)
         {
-                if (read(a2fd, a2event, 3) == 3)
+                memcpy(&readset, &openset, sizeof(openset));
+                if (select(maxfd + 1, &readset, NULL, NULL, NULL) > 0)
                 {
-                        // printf("a2pi: [0x%02X] [0x%02X] [0x%02X] ", a2event[0], a2event[1], a2event[2]);
-                        switch (a2event[0])
+                        /*
+                         * Serial port to Apple II transaction.
+                         */
+                        if (FD_ISSET(a2fd, &readset))
                         {
-                                case 0x80: /* sync */
-                                        prlog("a2pid: Re-Connected.\n");
-                                        a2event[0] = 0x81;  /* acknowledge */
-                                        write(a2fd, a2event, 1);
-                                        tcflush(a2fd, TCIFLUSH);
-                                        break;                                
-                                case 0x82: /* keyboard event */
-                                        // printf("Keyboard Event: 0x%02X:%c\n", a2event[1], a2event[2] & 0x7F);
-                                        sendkey(kbdfd, a2event[1], a2event[2]);
-                                        if (a2event[2] == 0x9B && a2event[1] & 0x80)
-                                                stop = TRUE;
-                                        break;
-                                case 0x84: /* mouse move event */
-                                        // printf("Mouse XY Event: %d,%d\n", (signed char)a2event[1], (signed char)a2event[2]);
-                                        sendrelxy(moufd, accel[a2event[1] & 0x0F], accel[a2event[2] & 0x0F]);
-                                        break;
-                                case 0x86: /* mouse button event */
-                                        // printf("Mouse Button %s Event 0x%02X\n", a2event[2] ? "[PRESS]" : "[RELEASE]", a2event[1]);
-                                        sendbttn(moufd, a2event[1], a2event[2]);
-                                        break;
-                                default:
-                                        prlog("a2pid: Unknown Event\n");
+                                if (read(a2fd, a2buf, 3) == 3)
+                                {
+                                        // printf("a2pi: Event [0x%02X] [0x%02X] [0x%02X]\n", a2buf[0], a2buf[1], a2buf[2]);
+                                        switch (a2buf[0])
+                                        {
+                                                case 0x80: /* sync */
+                                                        prlog("a2pid: Re-Connected.\n");
+                                                        a2buf[0] = 0x81;  /* acknowledge */
+                                                        write(a2fd, a2buf, 1);
+                                                        tcflush(a2fd, TCIFLUSH);
+                                                        break;                                
+                                                case 0x82: /* keyboard event */
+                                                        // printf("Keyboard Event: 0x%02X:%c\n", a2buf[1], a2buf[2] & 0x7F);
+                                                        sendkey(kbdfd, a2buf[1], a2buf[2]);
+                                                        if (a2buf[2] == 0x9B && a2buf[1] == 0xC0)
+                                                                stop = TRUE;
+                                                        break;
+                                                case 0x84: /* mouse move event */
+                                                        // printf("Mouse XY Event: %d,%d\n", (signed char)a2buf[1], (signed char)a2buf[2]);
+                                                        sendrelxy(moufd, accel[a2buf[1] & 0x0F], accel[a2buf[2] & 0x0F]);
+                                                        break;
+                                                case 0x86: /* mouse button event */
+                                                        // printf("Mouse Button %s Event 0x%02X\n", a2buf[2] ? "[PRESS]" : "[RELEASE]", a2buf[1]);
+                                                        sendbttn(moufd, a2buf[1], a2buf[2]);
+                                                        break;
+                                                case 0x90: /* acknowledge read bytes request*/
+                                                        if (a2reqlist) /* better have an outstanding request */
+                                                        {
+                                                                newtio.c_cc[VMIN]  = 1; /* blocking read until 1 char received */
+                                                                tcsetattr(a2fd, TCSANOW, &newtio);
+                                                                if (writeword(a2fd, a2reqlist->addr, 0x91) && writeword(a2fd, a2reqlist->count, 0x91))
+                                                                {
+                                                                        for (i = 0; i < a2reqlist->count; i++)
+                                                                        {
+                                                                                if (read(a2fd, a2buf, 1) == 1)
+                                                                                        a2reqlist->buffer[i] = a2buf[0];
+                                                                                else
+                                                                                {
+                                                                                        stop = TRUE;
+                                                                                        break;
+                                                                                }
+                                                                        }
+                                                                        // printf("a2pid: read %d bytes from 0x%04X\n", a2reqlist->count, a2reqlist->addr);
+                                                                }
+                                                                else
+                                                                        stop = TRUE;
+                                                                newtio.c_cc[VMIN]  = 3; /* blocking read until 3 chars received */
+                                                                tcsetattr(a2fd, TCSANOW, &newtio);
+                                                        }
+                                                        else
+                                                                stop = TRUE;
+                                                        break;
+                                                case 0x92: /* acknowledge write bytes */
+                                                        if (a2reqlist) /* better have an outstanding request */
+                                                        {
+                                                                newtio.c_cc[VMIN]  = 1; /* blocking read until 1 char received */
+                                                                tcsetattr(a2fd, TCSANOW, &newtio);
+                                                                if (writeword(a2fd, a2reqlist->addr, 0x93) && writeword(a2fd, a2reqlist->count, 0x93))
+                                                                {
+                                                                        if (write(a2fd, a2reqlist->buffer, a2reqlist->count) != a2reqlist->count)
+                                                                                stop = TRUE;
+                                                                         // else
+                                                                         //        printf("a2pid: wrote %d bytes to 0x%04X\n", a2reqlist->count, a2reqlist->addr);
+                                                                }
+                                                                else
+                                                                        stop = TRUE;
+                                                                newtio.c_cc[VMIN]  = 3; /* blocking read until 3 chars received */
+                                                                tcsetattr(a2fd, TCSANOW, &newtio);
+                                                        }
+                                                        else
+                                                                stop = TRUE;
+                                                        break;
+                                                case 0x94: /* acknowledge call */
+                                                        if (a2reqlist) /* better have an outstanding request */
+                                                        {
+                                                                newtio.c_cc[VMIN]  = 1; /* blocking read until 1 char received */
+                                                                tcsetattr(a2fd, TCSANOW, &newtio);
+                                                                if (!writeword(a2fd, a2reqlist->addr, 0x95))
+                                                                        stop = TRUE;
+                                                                // else
+                                                                //        printf("a2pid: call address 0x%04X\n", a2reqlist->addr);
+                                                                newtio.c_cc[VMIN]  = 3; /* blocking read until 3 chars received */
+                                                                tcsetattr(a2fd, TCSANOW, &newtio);
+                                                        }
+                                                        else
+                                                                stop = TRUE;
+                                                        break;
+                                                case 0x9E: /* request complete ok */
+                                                case 0x9F: /* request complete error */
+                                                        finreq(a2fd, (unsigned char)a2buf[0], (unsigned char)a2buf[1]);
+                                                        break;
+                                                default:
+                                                        prlog("a2pid: Unknown Event\n");
+                                                        stop = TRUE;
+                                        }
+                                }
+                                else
+                                {
+                                        prlog("a2pid: error read serial port ????\n");
                                         stop = TRUE;
+                                }
+                        }
+                        /*
+                         * Socket server connection.
+                         */
+                        if (FD_ISSET(srvfd, &readset))
+                        {
+                                int len;
+                                struct sockaddr inaddr;
+                                len   = sizeof(inaddr);
+                                reqfd = accept(srvfd, NULL, NULL);
+                                if (reqfd > 0)
+                                        FD_SET(reqfd, &openset);
+                                else
+                                        prlog("a2pid: error accept");
+                                maxfd = reqfd > maxfd ? reqfd : maxfd;
+                                prlog("a2pi: Client Connect\n");
+                        }
+                        /*
+                         * Socket client request.
+                         */
+                        if (reqfd > 0 && FD_ISSET(reqfd, &readset))
+                        {
+                                int addr, count;
+                                char *databuf;
+                                if (read(reqfd, a2buf, 1) == 1)
+                                {
+                                        // printf("a2pi: Request [0x%02X]\n", a2buf[0]);
+                                        switch (a2buf[0])
+                                        {
+                                                case 0x90: /* read bytes */
+                                                        if (read(reqfd, a2buf, 4) == 4)
+                                                        {
+                                                                addr  = (unsigned char)a2buf[0] | ((unsigned char)a2buf[1] << 8);
+                                                                count = (unsigned char)a2buf[1] | ((unsigned char)a2buf[2] << 8);
+                                                                if (count)
+                                                                {
+                                                                        databuf = malloc(count);
+                                                                        addreq(a2fd, reqfd, 0x90, addr, count, databuf);
+                                                                }
+                                                        }
+                                                        break;
+                                                case 0x92: /* write bytes */
+                                                        if (read(reqfd, a2buf, 4) == 4)
+                                                        {
+                                                                addr  = (unsigned char)a2buf[0] | ((unsigned char)a2buf[1] << 8);
+                                                                count = (unsigned char)a2buf[1] | ((unsigned char)a2buf[2] << 8);
+                                                                if (count)
+                                                                {
+                                                                        databuf = malloc(count);
+                                                                        if (read(reqfd, databuf, count) == count)
+                                                                                addreq(a2fd, reqfd, 0x92, addr, count, databuf);
+                                                                }
+                                                        }
+                                                        break;
+                                                case 0x94: /* call */
+                                                        if (read(reqfd, a2buf, 2) == 2)
+                                                        {
+                                                                addr  = (unsigned char)a2buf[0] | ((unsigned char)a2buf[1] << 8);
+                                                                addreq(a2fd, reqfd, 0x94, addr, 0, NULL);
+                                                        }
+                                                        break;
+                                                case 0xFF: /* close */
+                                                        FD_CLR(reqfd, &openset);
+                                                        close(reqfd);
+                                                        reqfd = 0;
+                                                        maxfd = a2fd > srvfd ? a2fd : srvfd;
+                                                        break;
+                                                default:
+                                                        prlog("a2pid: Unknown Request\n");
+                                                        stop = TRUE;
+                                        }
+                                }
+                                else
+                                {
+                                        prlog("a2pid: error read socket ????");
+                                        stop = TRUE;
+                                }
                         }
                 }
-                else
-                {
-                        prlog("a2pid: ????\n");
-                        stop = TRUE;
-                }
         }
+        if (reqfd > 0)
+                close(reqfd);
+        shutdown(srvfd, SHUT_RDWR);
+        close(srvfd);
         tcsetattr(a2fd, TCSANOW, &oldtio);
         tcflush(a2fd, TCIFLUSH);
         close(a2fd);
