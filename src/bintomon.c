@@ -18,16 +18,16 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 	sscanf(argv[1], "%x", &start_addr);
-	if (obj = fopen(argv[2], "rb"))
+	if ((obj = fopen(argv[2], "rb")))
 	{
 		printf("%04X:", start_addr);
 		while (fread(&b, 1, 1, obj) == 1)
 		{
 			printf(" %02X", b);
 			if (!(++start_addr & 0x07))
-				printf("\r\n:");
+				printf("\n:");
 		}
-		printf("\r\n");
+		printf("\n");
 		fclose(obj);
 	}
 	return (0);

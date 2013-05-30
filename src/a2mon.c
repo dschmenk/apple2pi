@@ -91,9 +91,10 @@ void prbytes(int address, int count, char *data)
 {
         int i;
         
-        printf("\n%04X:", address);
+        printf("%04X:", address);
         for (i = 0; i < count; i++)
                 printf(" %02X", (unsigned char)data[i]);
+        printf("\n");
 }
 void exec(int fd, int cmd, int *address, int value, char *data, int *index)
 {
@@ -115,18 +116,15 @@ void exec(int fd, int cmd, int *address, int value, char *data, int *index)
                                 prbytes(a, c, data);                                
                         }
                         *address = value + 1;
-                        printf("\n");
                         break;
                 case 0x92: /* write */
                         if (*index)
                                 a2write(fd, *address, *index, data);
                         *address += *index;
                         *index = 0;
-                        printf("\n");
                         break;
                 case 0x94: /* call */
                         a2call(fd, *address, NULL);
-                        printf("\n");
                         break;
         }
 }
