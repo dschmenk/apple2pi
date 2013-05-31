@@ -8,10 +8,9 @@ Apple II Pi works by connecting an Apple II to a Raspberry Pi using a RS232 seri
 
 Installing and configuring the Apple II:  You will need an Apple //c or Apple //e w/ SuperSerial Card.  An Apple II Mouse is recommended for that full-on retro feel, but not required.  Download and install the A2PI.DSK disk image onto a 5 1/4 floppy.  ADTPro would be the recommended tool for that operation.
 
-Installing and configuring the Raspberry Pi:  Download the a2pid.c to your Raspberry Pi.  Compile the daemon with 'cc a2pid.c -o a2pid' and copy the result with 'sudo cp a2pid /usr/bin'.  You will need to disable the Raspbain serial login by editing /etc/inittab and commenting out the line (probably at the very bottom) that looks like:<nl>
-
+Installing and configuring the Raspberry Pi:  Download the a2pid.c to your Raspberry Pi.  Compile the daemon with 'cc a2pid.c -o a2pid' and copy the result with 'sudo cp a2pid /usr/local/bin'.  You will need to disable the Raspbain serial login by editing /etc/inittab and commenting out the line (probably at the very bottom) to look like:<br>
 <code>
-T0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100
+\#T0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100
 </code>
 
 To adjust the NTSC output so it fits nicely on my //c monitor, I edited the setting in /boot/config.txt such that:
@@ -26,7 +25,7 @@ overscan_top=-8<br>
 To run the a2pid daemon automatically at boot time, edit /etc/rc.local and add:
 
 <code>
-a2pid --daemon
+/usr/local/bin/a2pid --daemon
 </code>
 
 right before the line:
