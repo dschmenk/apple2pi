@@ -8,7 +8,7 @@ Apple II Pi works by connecting an Apple II to a Raspberry Pi using a RS232 seri
 
 Installing and configuring the Apple II:  You will need an Apple //c or Apple //e w/ SuperSerial Card.  An Apple II Mouse is recommended for that full-on retro feel, but not required.  Download and install the A2PI.DSK disk image onto a 5 1/4 floppy.  ADTPro would be the recommended tool for that operation.
 
-Installing and configuring the Raspberry Pi:  Download the a2pid.c to your Raspberry Pi.  Compile the daemon with 'cc a2pid.c -o a2pid' and copy the result with 'sudo cp a2pid /usr/local/bin'.  You will need to disable the Raspbain serial login by editing /etc/inittab and commenting out the line (probably at the very bottom) to look like:<br>
+Installing and configuring the Raspberry Pi:  Download the apple2pi project to your Raspberry Pi.  Enter the apple2pi/src directory.  Compile the daemon and tools with 'make' and copy the results to /usr/local/bin with 'sudo make install'.  You will need to disable the Raspbain serial login by editing /etc/inittab and commenting out the line (probably at the very bottom) to look like:<br>
 <code>
 \#T0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100
 </code>
@@ -45,3 +45,5 @@ Theory of operation:  Apple II Pi works by running code on the Apple II and the 
 Enjoy,
 
 Dave Schmenk
+
+P.S. For non-Raspberry Pi owners:  This isn't actually tied to the Raspberry Pi in any way, except for the default serial port used to connect the Pi to the Apple II.  On most up-to-date Linux distributions, you should be able to build all the files.  To run the daemon on a specific serial port, just add it as a command line option i.e. a2pid --daemon /dev/ttyS0
