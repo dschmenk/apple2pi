@@ -413,7 +413,7 @@ int writeword(int fd, int word, char ack)
 void prlog(char *str)
 {
         if (!isdaemon)
-                printf(str);
+                puts(str);
 }
 struct a2request *addreq(int a2fd, int reqfd, int type, int addr, int count, char *buffer)
 {
