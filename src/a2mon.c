@@ -195,8 +195,16 @@ int parsestr(int fd, char *cmdstr)
                                 break;
                         case '\n':
                         case '\0':
-                                if (parseval != -1 && cmd == 0x92)
-                                        databuf[index++] = parseval;
+                                if (parseval != -1)
+                                {
+                                        if (cmd == 0x92)
+                                                databuf[index++] = parseval;
+                                        else if (cmd == 0)
+                                        {
+                                                addr = parseval;
+                                                cmd = 0x90;
+                                        }
+                                }
                                 exec(fd, cmd, &addr, parseval, databuf, &index);
                                 return 1;
                                 break;
