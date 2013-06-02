@@ -793,6 +793,8 @@ void main(int argc, char **argv)
                                                                         finreq(a2fd, (unsigned char)iopkt[0], (unsigned char)iopkt[1]);
                                                                 }
                                                         }
+                                                        else
+                                                                stop = TRUE;
                                                         break;
                                                 default:
                                                         prlog("a2pid: Unknown Event\n");
