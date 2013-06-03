@@ -308,8 +308,8 @@ int scancode[256] = {
                    MOD_SHIFT | KEY_GRAVE,       // ~      code 7E
                                KEY_DELETE       // DELETE code 7F
 };
-int accel[32] = { 0,  1,  4,  8,  8,  8,  8,  8, 8, 9, 10, 11, 12, 13, 14, 15
-                 -16, -15, -14, -13, -12, -11, -10, -9, -8, -8, -8, -8, -8, -8, -4, -1}; 
+int accel[32] = { 0,  1,  4,  8,  9,  10,  11,  12, 13, 14, 15, 16, 17, 18, 19, 20
+                 -21, -20, -19, -18, -17, -16, -15, -14, -13, -12, -11, -10, -9, -8, -4, -1}; 
 volatile int stop = FALSE, isdaemon = FALSE;
 struct input_event evkey, evrelx, evrely, evsync;
 
