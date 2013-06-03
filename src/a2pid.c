@@ -308,8 +308,8 @@ int scancode[256] = {
                    MOD_SHIFT | KEY_GRAVE,       // ~      code 7E
                                KEY_DELETE       // DELETE code 7F
 };
-int accel[16] = { 0,  1,  4,  8,  8,  8,  8,  8,
-                 -8, -8, -8, -8, -8, -8, -4, -1}; 
+int accel[32] = { 0,  1,  4,  8,  8,  8,  8,  8, 8, 9, 10, 11, 12, 13, 14, 15
+                 -16, -15, -14, -13, -12, -11, -10, -9, -8, -8, -8, -8, -8, -8, -4, -1}; 
 volatile int stop = FALSE, isdaemon = FALSE;
 struct input_event evkey, evrelx, evrely, evsync;
 
@@ -702,7 +702,7 @@ void main(int argc, char **argv)
                                                         break;
                                                 case 0x84: /* mouse move event */
                                                         // printf("Mouse XY Event: %d,%d\n", (signed char)iopkt[1], (signed char)iopkt[2]);
-                                                        sendrelxy(moufd, accel[iopkt[1] & 0x0F], accel[iopkt[2] & 0x0F]);
+                                                        sendrelxy(moufd, accel[iopkt[1] & 0x1F], accel[iopkt[2] & 0x1F]);
                                                         break;
                                                 case 0x86: /* mouse button event */
                                                         // printf("Mouse Button %s Event 0x%02X\n", iopkt[2] ? "[PRESS]" : "[RELEASE]", iopkt[1]);
