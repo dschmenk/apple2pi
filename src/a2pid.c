@@ -40,11 +40,15 @@ struct a2request {
 /*
  * ASCII to scancode conversion
  */
-#define MOD_ALT         0x40
+#define MOD_FN          0x80
 #define MOD_CTRL        0x8000
-#define MOD_SHIFT       0x4000
+#define MOD_ALT         0x4000
+#define MOD_SHIFT       0x2000
+#define KEY_CODE        0x03FF
+#define KEY_PRESS       0x80
+#define KEY_ASCII       0x7F
 
-int scancode[256] = {
+int keycode[256] = {
         /*
          * normal scancode
          */
@@ -313,59 +317,84 @@ int accel[32] = { 0,  1,  4,  8,  9,  10,  11,  12, 13, 14, 15, 16, 17, 18, 19, 
 volatile int stop = FALSE, isdaemon = FALSE;
 struct input_event evkey, evrelx, evrely, evsync;
 
-void sendkey(int fd, int mod, int key)
+void sendkeycodedown(int fd, int code)
 {
-        int code = scancode[(mod & 0x80) | (key & 0x7F)];
         /*
          * press keys
          */
-        if (mod & MOD_ALT)
+        evkey.value = 1;
+        if (code & MOD_ALT)
         {
-                evkey.code  = KEY_LEFTALT;
-                evkey.value = 1;
+                evkey.code = KEY_LEFTALT;
                 write(fd, &evkey, sizeof(evkey));
         }
         if (code & MOD_CTRL)
         {
-                evkey.code  = KEY_LEFTCTRL;
-                evkey.value = 1;
+                evkey.code = KEY_LEFTCTRL;
                 write(fd, &evkey, sizeof(evkey));
         }
         if (code & MOD_SHIFT)
         {
-                evkey.code  = KEY_LEFTSHIFT;
-                evkey.value = 1;
+                evkey.code = KEY_LEFTSHIFT;
                 write(fd, &evkey, sizeof(evkey));
         }
-        evkey.code  = code & 0x3FF;
-        evkey.value = 1;
+        evkey.code = code & KEY_CODE;
         write(fd, &evkey,  sizeof(evkey));
         write(fd, &evsync, sizeof(evsync));
+}
+void sendkeycodeup(int fd, int code)
+{
         /*
          * release keys
          */
-        evkey.code  = code & 0x3FF;
+        evkey.code  = code & KEY_CODE;
         evkey.value = 0;
         write(fd, &evkey, sizeof(evkey));
         if (code & MOD_SHIFT)
         {
                 evkey.code  = KEY_LEFTSHIFT;
-                evkey.value = 0;
                 write(fd, &evkey, sizeof(evkey));
         }
         if (code & MOD_CTRL)
         {
                 evkey.code  = KEY_LEFTCTRL;
-                evkey.value = 0;
                 write(fd, &evkey, sizeof(evkey));
         }        
-        if (mod & MOD_ALT)
+        if (code & MOD_ALT)
         {
                 evkey.code  = KEY_LEFTALT;
-                evkey.value = 0;
                 write(fd, &evkey, sizeof(evkey));
         }
         write(fd, &evsync, sizeof(evsync));
+}
+void sendkey(int fd, int mod, int key)
+{
+        static int prevcode = -1;
+        int code = keycode[(mod & MOD_FN) | (key & KEY_ASCII)]
+                  | ((mod << 8) & MOD_ALT);
+        
+        if (prevcode >= 0)
+        {
+                sendkeycodeup(fd, prevcode);
+                if (!(key & KEY_PRESS) && ((code & KEY_CODE) != (prevcode & KEY_CODE)))
+                        /*
+                         * missed a key down event
+                         * synthesize one
+                         */
+                        sendkeycodedown(fd, code);
+                (key & KEY_PRESS) ? sendkeycodedown(fd, code) : sendkeycodeup(fd, code);
+        }
+        else
+        {
+                sendkeycodedown(fd, code);
+                if (!(key & KEY_PRESS))
+                        /*
+                         * missed a key down event
+                         * already synthesized one
+                         */
+                        sendkeycodeup(fd, code);
+        }
+        prevcode = (key & KEY_PRESS) ? code : -1;
 }
 void sendbttn(int fd, int mod, int bttn)
 {
@@ -555,6 +584,8 @@ void main(int argc, char **argv)
                 die("error: uinput open");
         if (ioctl(kbdfd, UI_SET_EVBIT, EV_KEY) < 0)
                 die("error: uinput ioctl EV_KEY");
+        if (ioctl(kbdfd, UI_SET_EVBIT, EV_REP) < 0)
+                die("error: uinput ioctl EV_REP");
         for (i = KEY_ESC; i <= KEY_F10; i++)
                 if (ioctl(kbdfd, UI_SET_KEYBIT, i) < 0)
                         die("error: uinput ioctl SET_KEYBITs");        
@@ -685,7 +716,7 @@ void main(int argc, char **argv)
                         {
                                 if (read(a2fd, iopkt, 3) == 3)
                                 {
-                                        //printf("a2pi: Event [0x%02X] [0x%02X] [0x%02X]\n", iopkt[0], iopkt[1], iopkt[2]);
+                                        // printf("a2pi: Event [0x%02X] [0x%02X] [0x%02X]\n", iopkt[0], iopkt[1], iopkt[2]);
                                         switch (iopkt[0])
                                         {
                                                 case 0x80: /* sync */
