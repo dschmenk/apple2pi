@@ -604,6 +604,20 @@ void main(int argc, char **argv)
         if (ioctl(kbdfd, UI_DEV_CREATE) < 0)
                 die("error: ioctl DEV_CREATE");
         /*
+         * Set repeat delay values that make sense.
+         */
+        bzero(&evkey,  sizeof(evkey));
+        evkey.type  = EV_REP;
+        evkey.code  = REP_DELAY;
+        evkey.value = 500;      /* 0.5 sec delay */
+        if (write(kbdfd, &evkey, sizeof(evkey)) < 0)
+                die("error: REP_DELAY");
+        evkey.type  = EV_REP;
+        evkey.code  = REP_PERIOD;
+        evkey.value = 100;      /* 10 reps/sec */
+        if (write(kbdfd, &evkey, sizeof(evkey)) < 0)
+                die("error: REP_PERIOD");
+        /*
          * Create mouse input device
          */
         prlog("a2pid: Create mouse input device\n");
