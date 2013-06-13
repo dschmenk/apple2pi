@@ -614,7 +614,7 @@ void main(int argc, char **argv)
                 die("error: REP_DELAY");
         evkey.type  = EV_REP;
         evkey.code  = REP_PERIOD;
-        evkey.value = 100;      /* 10 reps/sec */
+        evkey.value = 67;      /* 15 reps/sec */
         if (write(kbdfd, &evkey, sizeof(evkey)) < 0)
                 die("error: REP_PERIOD");
         /*
@@ -652,48 +652,16 @@ void main(int argc, char **argv)
         /*
          * Initialize event structures.
          */
-         bzero(&evkey,  sizeof(evkey));
-         bzero(&evsync, sizeof(evsync));
-         bzero(&evrelx, sizeof(evrelx));
-         bzero(&evrely, sizeof(evrely));
-         evkey.type  = EV_KEY;
-         evrelx.type = EV_REL;
-         evrelx.code = REL_X;
-         evrely.type = EV_REL;
-         evrely.code = REL_Y;
-         evsync.type = EV_SYN;
-        /*
-         * Open serial port.
-         */
-        prlog("a2pid: Open serial port\n");
-        a2fd = open(devtty, O_RDWR | O_NOCTTY);
-        if (a2fd < 0)
-                die("error: serial port open");
-        tcgetattr(a2fd, &oldtio); /* save current port settings */
-        bzero(&newtio, sizeof(newtio));
-        newtio.c_cflag     = BAUDRATE /*| CRTSCTS*/ | CS8 | CLOCAL | CREAD;
-        newtio.c_iflag     = IGNPAR;
-        newtio.c_oflag     = 0;
-        newtio.c_lflag     = 0; /* set input mode (non-canonical, no echo,...) */
-        newtio.c_cc[VTIME] = 0; /* inter-character timer unused */
-        newtio.c_cc[VMIN]  = 1; /* blocking read until 1 char received */
-        tcsetattr(a2fd, TCSANOW, &newtio);
-        prlog("a2pid: Waiting...\n");
-        tcflush(a2fd, TCIFLUSH);
-        newtio.c_cc[VMIN]  = 3; /* blocking read until 3 chars received */
-        tcsetattr(a2fd, TCSANOW, &newtio);
-        if (read(a2fd, iopkt, 1) == 1)
-        {
-                if (iopkt[0] == 0x80)     /* receive sync */
-                {
-                        prlog("a2pid: Connected.\n");
-                        iopkt[0] = 0x81;  /* acknowledge */
-                        write(a2fd, iopkt, 1);
-                        tcflush(a2fd, TCIFLUSH);
-                }
-                else
-                        stop = TRUE;
-        }
+        bzero(&evkey,  sizeof(evkey));
+        bzero(&evsync, sizeof(evsync));
+        bzero(&evrelx, sizeof(evrelx));
+        bzero(&evrely, sizeof(evrely));
+        evkey.type  = EV_KEY;
+        evrelx.type = EV_REL;
+        evrelx.code = REL_X;
+        evrely.type = EV_REL;
+        evrely.code = REL_Y;
+        evsync.type = EV_SYN;
         /*
          * Open socket.
          */
@@ -710,6 +678,48 @@ void main(int argc, char **argv)
         if (listen(srvfd, 1) < 0)
                 die("error: listen socket");
         reqfd = 0;
+        /*
+         * Open serial port.
+         */
+        prlog("a2pid: Open serial port\n");
+        a2fd = open(devtty, O_RDWR | O_NOCTTY);
+        if (a2fd < 0)
+                die("error: serial port open");
+        tcflush(a2fd, TCIFLUSH);
+        tcgetattr(a2fd, &oldtio); /* save current port settings */
+        bzero(&newtio, sizeof(newtio));
+        newtio.c_cflag     = BAUDRATE /*| CRTSCTS*/ | CS8 | CLOCAL | CREAD;
+        newtio.c_iflag     = IGNPAR;
+        newtio.c_oflag     = 0;
+        newtio.c_lflag     = 0; /* set input mode (non-canonical, no echo,...) */
+        newtio.c_cc[VTIME] = 0; /* inter-character timer unused */
+        newtio.c_cc[VMIN]  = 1; /* blocking read until 1 char received */
+        tcsetattr(a2fd, TCSANOW, &newtio);
+        prlog("a2pid: Waiting...\n");
+        iopkt[0] = 0x80;  /* request re-sync if Apple II already running */
+        write(a2fd, iopkt, 1);        
+        if (read(a2fd, iopkt, 1) == 1)
+        {
+                if (iopkt[0] == 0x80)   /* receive sync */
+                {
+                        prlog("a2pid: Connected.\n");
+                        iopkt[0] = 0x81;  /* acknowledge */
+                        write(a2fd, iopkt, 1);
+                        tcflush(a2fd, TCIFLUSH);
+                }
+                else if (iopkt[0] == 0x9F)     /* bad request from Apple II */
+                {
+                        prlog("a2pi: Bad Connect Request.\n");
+                        tcflush(a2fd, TCIFLUSH);
+                }
+                else
+                {
+                        printf("a2pi: Bad Sync ACK [0x%02X]\n", iopkt[0]);
+                        stop = TRUE;
+                }
+        }
+        newtio.c_cc[VMIN] = 3; /* blocking read until 3 chars received */
+        tcsetattr(a2fd, TCSANOW, &newtio);
         FD_ZERO(&openset);
         FD_SET(a2fd,  &openset);
         FD_SET(srvfd, &openset);
@@ -843,7 +853,8 @@ void main(int argc, char **argv)
                                                         break;
                                                 default:
                                                         prlog("a2pid: Unknown Event\n");
-                                                        stop = TRUE;
+                                                        tcflush(a2fd, TCIFLUSH);
+                                                        //stop = TRUE;
                                         }
                                 }
                                 else
