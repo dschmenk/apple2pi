@@ -714,7 +714,7 @@ void main(int argc, char **argv)
                 }
                 else
                 {
-                        printf("a2pi: Bad Sync ACK [0x%02X]\n", iopkt[0]);
+                        prlog("a2pi: Bad Sync ACK\n");
                         stop = TRUE;
                 }
         }
@@ -740,7 +740,7 @@ void main(int argc, char **argv)
                         {
                                 if (read(a2fd, iopkt, 3) == 3)
                                 {
-                                        // printf("a2pi: Event [0x%02X] [0x%02X] [0x%02X]\n", iopkt[0], iopkt[1], iopkt[2]);
+                                        printf("a2pi: Event [0x%02X] [0x%02X] [0x%02X]\n", iopkt[0], iopkt[1], iopkt[2]);
                                         switch (iopkt[0])
                                         {
                                                 case 0x80: /* sync */
