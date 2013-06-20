@@ -663,22 +663,6 @@ void main(int argc, char **argv)
         evrely.code = REL_Y;
         evsync.type = EV_SYN;
         /*
-         * Open socket.
-         */
-        prlog("a2pid: Open server socket\n");
-        bzero(&servaddr, sizeof(servaddr));
-        servaddr.sin_family      = AF_INET;
-        servaddr.sin_port        = htons(6502);
-        servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-        srvfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-        if (srvfd < 0)
-                die("error: socket create");
-        if (bind(srvfd,(struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
-                die("error: bind socket");
-        if (listen(srvfd, 1) < 0)
-                die("error: listen socket");
-        reqfd = 0;
-        /*
          * Open serial port.
          */
         prlog("a2pid: Open serial port\n");
@@ -720,6 +704,22 @@ void main(int argc, char **argv)
         }
         newtio.c_cc[VMIN] = 3; /* blocking read until 3 chars received */
         tcsetattr(a2fd, TCSANOW, &newtio);
+        /*
+         * Open socket.
+         */
+        prlog("a2pid: Open server socket\n");
+        bzero(&servaddr, sizeof(servaddr));
+        servaddr.sin_family      = AF_INET;
+        servaddr.sin_port        = htons(6502);
+        servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+        srvfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (srvfd < 0)
+                die("error: socket create");
+        if (bind(srvfd,(struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+                die("error: bind socket");
+        if (listen(srvfd, 1) < 0)
+                die("error: listen socket");
+        reqfd = 0;
         FD_ZERO(&openset);
         FD_SET(a2fd,  &openset);
         FD_SET(srvfd, &openset);

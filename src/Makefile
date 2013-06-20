@@ -1,4 +1,4 @@
-BIN=a2pid a2mon dskread dskwrite bintomon
+BIN=a2serclk a2pid a2mon dskread dskwrite bintomon
 
 all: $(BIN)
 
