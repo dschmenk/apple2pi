@@ -216,16 +216,16 @@ int keycode[256] = {
         MOD_CTRL |             KEY_6,           // CTRL-6 code 1E
         MOD_CTRL |             KEY_MINUS,       // CTRL-- code 1F
                                KEY_SPACE,       // ' '    code 20
-                   MOD_SHIFT | KEY_1,           // !      code 21
+		                       KEY_F11,         // !      code 21
                    MOD_SHIFT | KEY_APOSTROPHE,  // "      code 22
-                   MOD_SHIFT | KEY_3,           // #      code 23
-                   MOD_SHIFT | KEY_4,           // $      code 24
-                   MOD_SHIFT | KEY_5,           // %      code 25
-                   MOD_SHIFT | KEY_7,           // &      code 26
+			                   KEY_F13,         // #      code 23
+                               KEY_F14,         // $      code 24
+							   KEY_F15,         // %      code 25
+							   KEY_F17,         // &      code 26
                                KEY_APOSTROPHE,  // '      code 27
-                   MOD_SHIFT | KEY_9,           // (      code 28
-                   MOD_SHIFT | KEY_0,           // )      code 29
-                   MOD_SHIFT | KEY_8,           // *      code 2A
+                               KEY_F19,         // (      code 28
+                               KEY_F20,         // )      code 29
+                               KEY_F18,         // *      code 2A
                    MOD_SHIFT | KEY_EQUAL,       // +      code 2B
                                KEY_COMMA,       // ,      code 2C
                                KEY_MINUS,       // -      code 2D
@@ -247,7 +247,7 @@ int keycode[256] = {
                                KEY_EQUAL,       // =      code 3D
                    MOD_SHIFT | KEY_DOT,         // >      code 3E
                    MOD_SHIFT | KEY_SLASH,       // ?      code 3F
-                   MOD_SHIFT | KEY_2,           // @      code 40
+                               KEY_F12,         // @      code 40
                    MOD_SHIFT | KEY_A,           // A      code 41
                    MOD_SHIFT | KEY_B,           // B      code 42
                    MOD_SHIFT | KEY_C,           // C      code 43
@@ -277,7 +277,7 @@ int keycode[256] = {
                                KEY_LEFTBRACE,   // [      code 5B
                                KEY_BACKSLASH,   // \      code 5C
                                KEY_RIGHTBRACE,  // ]      code 5D
-                   MOD_SHIFT | KEY_6,           // ^      code 5E
+							   KEY_F16,         // ^      code 5E
                    MOD_SHIFT | KEY_MINUS,       // _      code 5F
                                KEY_GRAVE,       // `      code 60
                                KEY_A,           // a      code 61
@@ -418,6 +418,10 @@ void sendbttn(int fd, int mod, int bttn)
 }
 void sendrelxy(int fd, int x, int y)
 {
+		if (x > 4 || x < -4) x = x *4;
+		else x = accel[x & 0x1F];
+		if (y > 4 || y < -4) y = y * 4;
+		else y = accel[y & 0x1F];
         evrelx.value = x;
         evrely.value = y;
         write(fd, &evrelx, sizeof(evrelx));
@@ -740,7 +744,7 @@ void main(int argc, char **argv)
                         {
                                 if (read(a2fd, iopkt, 3) == 3)
                                 {
-                                        printf("a2pi: Event [0x%02X] [0x%02X] [0x%02X]\n", iopkt[0], iopkt[1], iopkt[2]);
+                                        // printf("a2pi: Event [0x%02X] [0x%02X] [0x%02X]\n", iopkt[0], iopkt[1], iopkt[2]);
                                         switch (iopkt[0])
                                         {
                                                 case 0x80: /* sync */
@@ -757,7 +761,7 @@ void main(int argc, char **argv)
                                                         break;
                                                 case 0x84: /* mouse move event */
                                                         // printf("Mouse XY Event: %d,%d\n", (signed char)iopkt[1], (signed char)iopkt[2]);
-                                                        sendrelxy(moufd, accel[iopkt[1] & 0x1F], accel[iopkt[2] & 0x1F]);
+                                                        sendrelxy(moufd, (signed char)iopkt[1], (signed char)iopkt[2]);
                                                         break;
                                                 case 0x86: /* mouse button event */
                                                         // printf("Mouse Button %s Event 0x%02X\n", iopkt[2] ? "[PRESS]" : "[RELEASE]", iopkt[1]);
