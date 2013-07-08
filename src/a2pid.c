@@ -540,33 +540,9 @@ void main(int argc, char **argv)
                  */
                 if (strcmp(argv[1], "--daemon") == 0)
                 {
-                        pid_t pid, sid; /* our process ID and Session ID */
-                
-                        pid = fork();   /* fork off the parent process */
-                        if (pid < 0)
-                                die("a2pid: fork() failure");
-                        /*
-                         * If we got a good PID, then
-                         * we can exit the parent process
-                         */
-                        if (pid > 0)
-                                exit(EXIT_SUCCESS);
-                        umask(0);       /* change the file mode mask */
-                        /*
-                         * Open any logs here
-                         */
-                        sid = setsid(); /* create a new SID for the child process */
-                        if (sid < 0)
-                                die("a2pid: setsid() failure");
-                        if ((chdir("/")) < 0)   /* change the current working directory */
-                                die("a2pid: chdir() failure");
-                        /*
-                         * Close out the standard file descriptors
-                         */
-                        close(STDIN_FILENO);
-                        close(STDOUT_FILENO);
-                        close(STDERR_FILENO);
-                        isdaemon = TRUE;
+                        if (daemon(0, 0) != 0)
+                                die("a2pid: daemon() failure");
+                         isdaemon = TRUE;
                         /*
                          * Another argument must be tty device
                          */
