@@ -18,7 +18,7 @@ You will also want to disable the console messages that go out to the serial por
 dwc_otg.lpm_enable=0 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline rootwait
 </code>
 
-To adjust the NTSC output so it fits nicely on my //c monitor, I edited the setting in /boot/config.txt such that:
+If you are using an HDMI port to display video, skip the oversan settings.  This was for my monitor and your values may vary (a lot). I adjust the NTSC output so it fits nicely on my //c monitor, I edited the setting in /boot/config.txt such that:
 
 <code>
 overscan_left=26<br>
