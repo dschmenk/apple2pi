@@ -12,6 +12,7 @@ Installing and configuring the Raspberry Pi:  Download the apple2pi project to y
 <code>
 \#T0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100
 </code>
+<br>
 You will also want to disable the console messages that go out to the serial port in the /boot/cmdline.txt file.  Remove the "console=" clause and the "kgdboc=" clause from the /boot/cmdline.txt file.  Mine looks like:<br>
 <code>
 dwc_otg.lpm_enable=0 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline rootwait
