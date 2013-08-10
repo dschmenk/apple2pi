@@ -848,6 +848,9 @@ void main(int argc, char **argv)
                          */
                         if (FD_ISSET(srvfd, &readset))
                         {
+                                int len;
+                                struct sockaddr inaddr;
+                                len   = sizeof(inaddr);
                                 reqfd = accept(srvfd, NULL, NULL);
                                 if (reqfd > 0)
                                         FD_SET(reqfd, &openset);
