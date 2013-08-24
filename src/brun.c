@@ -60,7 +60,7 @@ int main(int argc, char **argv)
 	    len = 0;
 	}
     }
-    printf("\nCalling Apple II...");
+    printf("\nRunning...");
     fflush(stdout);
     a2call(pifd, entry, &result);
     a2close(pifd);

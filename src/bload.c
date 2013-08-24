@@ -41,6 +41,7 @@ int main(int argc, char **argv)
     if (addr + len > MAXSIZE)
 	len = MAXSIZE - addr;
     memptr = membuff;
+    printf("Loading");
     while (len)
     {
 	printf(".");
