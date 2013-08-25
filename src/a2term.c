@@ -8,16 +8,14 @@ int a2cin(int fd, char cin)
     unsigned char cinpkt[2];
     cinpkt[0] = 0x96; // keyboard input
     cinpkt[1] = cin;
-    write(fd, cinpkt, 2);
-    read(fd, cinpkt, 2);
-    return (cinpkt[0] == 0x9E);
+    return (write(fd, cinpkt, 2));
 }
 int main(int argc, char **argv)
 {
     struct termios oldtio,newtio;
     fd_set readset, openset;
     unsigned char iopkt[2];
-    int state = RUN;
+    int state = RUN, cin = 0;
     int pifd = a2open(argc > 1 ? argv[1] : "127.0.0.1");
     if (pifd < 0)
     {
@@ -63,6 +61,16 @@ int main(int argc, char **argv)
 			    putchar('\n');
 			fflush(stdout);
 		    }
+		    else if (iopkt[0] == 0x9E)
+		    {
+			if (iopkt[1] == cin)
+			   cin = 0;
+			else
+			{
+			    fprintf(stderr, "\nInput character mismatch!\n");
+			    state = STOP;
+			}
+		    }
 		}
 	    }
 	    if (FD_ISSET(STDIN_FILENO, &readset))
@@ -70,9 +78,43 @@ int main(int argc, char **argv)
 		if (read(STDIN_FILENO, iopkt, 1) == 1)
 		{
 		    if (iopkt[0] == 0x1B)
-			state = STOP;
-		    else
-			a2cin(pifd, iopkt[0] | 0x80);
+		    {
+			if (read(STDIN_FILENO, iopkt, 1) == 1)
+			{
+			    if (iopkt[0] == 0x5B && read(STDIN_FILENO, iopkt, 1) == 1)
+			    {
+				switch (iopkt[0])
+				{
+				    case 0x44: // left arrow
+					iopkt[0] = 0x88;
+					break;
+				    case 0x43: // right arrow
+					iopkt[0] = 0x95;
+					break;
+				    case 0x42: // down arrow
+					iopkt[0] = 0x8A;
+					break;
+				    case 0x41: // up arrow
+					iopkt[0] = 0x9B;
+					break;
+				    default:
+					iopkt[0] = 0xA0;
+				}
+			    }
+			    else if (iopkt[0] == 'q' || iopkt[0] == 'Q')
+				state = STOP;
+			}
+		    }
+		    else if (iopkt[0] == 0x7F)
+			iopkt[0] = 0x88;
+		    if (cin == 0)
+		    {
+			cin= iopkt[0] | 0x80;
+			a2cin(pifd, cin);
+		    }
+		    /*
+		     * else drop the character!
+		     */
 		}
 	    }
 	}
