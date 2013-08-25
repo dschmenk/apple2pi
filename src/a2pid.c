@@ -453,7 +453,7 @@ void prlog(char *str)
 }
 struct a2request *addreq(int a2fd, int reqfd, int type, int addr, int count, char *buffer)
 {
-        char rwchar;
+    char rwchar;
     struct a2request *a2req = a2reqfree;
     if (a2req == NULL)
 	a2req = malloc(sizeof(struct a2request));
@@ -557,8 +557,8 @@ void main(int argc, char **argv)
     struct uinput_user_dev uidev;
     struct termios oldtio,newtio;
     unsigned char iopkt[16];
-    int i, c, lastbtn;
-    int a2fd, kbdfd, moufd, srvfd, reqfd, maxfd;
+    int i, c, lastbtn, cout;
+    int a2fd, kbdfd, moufd, srvfd, reqfd, coutfd, maxfd;
     struct sockaddr_in servaddr;
     fd_set readset, openset;
     char *devtty = "/dev/ttyAMA0"; /* default for Raspberry Pi */
@@ -737,7 +737,8 @@ void main(int argc, char **argv)
      */
 reset:
     state = RUN;
-    reqfd = 0;
+    cout  = -1;
+    reqfd = coutfd = 0;
     FD_ZERO(&openset);
     FD_SET(a2fd,  &openset);
     FD_SET(srvfd, &openset);
@@ -758,7 +759,7 @@ reset:
 	    {
 		if (read(a2fd, iopkt, 3) == 3)
 		{
-		    // printf("a2pi: Event [0x%02X] [0x%02X] [0x%02X]\n", iopkt[0], iopkt[1], iopkt[2]);
+		    //printf("a2pi: Event [0x%02X] [0x%02X] [0x%02X]\n", iopkt[0], iopkt[1], iopkt[2]);
 		    switch (iopkt[0])
 		    {
 			case 0x80: /* sync */
@@ -849,6 +850,26 @@ reset:
 			    }
 			    else
 				state = RESET;
+			    break;
+			case 0x96: /* send input char to Apple II */
+			    if (a2reqlist) /* better have an outstanding request */
+			    {
+				//printf("a2pid: call address 0x%04X\n", a2reqlist->addr);
+				newtio.c_cc[VMIN]  = 1; /* blocking read until 1 char received */
+				tcsetattr(a2fd, TCSANOW, &newtio);
+				if (!writeword(a2fd, a2reqlist->addr, 0x97))
+				    state = RESET;
+				newtio.c_cc[VMIN]  = 3; /* blocking read until 3 chars received */
+				tcsetattr(a2fd, TCSANOW, &newtio);
+			    }
+			    else
+				state = RESET;
+			    break;
+			case 0x98: /* get output char from Apple II */
+			    if (coutfd)
+				write(coutfd, iopkt, 2);
+			    else
+				cout = iopkt[1];
 			    break;
 			case 0x9E: /* request complete ok */
 			case 0x9F: /* request complete error */
@@ -951,11 +972,25 @@ reset:
 				addreq(a2fd, reqfd, 0x94, addr, 0, NULL);
 			    }
 			    break;
+			case 0x96: /* send input char to Apple II */
+			    if (read(reqfd, iopkt, 1) == 1)
+				addreq(a2fd, reqfd, 0x96, iopkt[0], 0, NULL);
+			    break;
+			case 0x98: /* get output chars from Apple II */
+			    if (cout >= 0)
+			    {
+				iopkt[1] = cout;
+				write(reqfd, iopkt, 2);
+				cout = -1;
+			    }
+			    coutfd = reqfd;
+			    break;
 			case 0xFF: /* close */
 			    FD_CLR(reqfd, &openset);
 			    close(reqfd);
-			    reqfd = 0;
-			    maxfd = a2fd > srvfd ? a2fd : srvfd;
+			    reqfd  = 0;
+			    coutfd = 0;
+			    maxfd  = a2fd > srvfd ? a2fd : srvfd;
 			    break;
 			default:
 			    prlog("a2pid: Unknown Request\n");
