@@ -759,7 +759,7 @@ reset:
 	    {
 		if (read(a2fd, iopkt, 3) == 3)
 		{
-		    //printf("a2pi: Event [0x%02X] [0x%02X] [0x%02X]\n", iopkt[0], iopkt[1], iopkt[2]);
+		    // printf("a2pi: A2 Event [0x%02X] [0x%02X] [0x%02X]\n", iopkt[0], iopkt[1], iopkt[2]);
 		    switch (iopkt[0])
 		    {
 			case 0x80: /* sync */
@@ -925,7 +925,7 @@ reset:
 		char *databuf;
 		if (read(reqfd, iopkt, 1) == 1)
 		{
-		    // printf("a2pi: Request [0x%02X]\n", iopkt[0]);
+		    // printf("a2pi: Client Request [0x%02X]\n", iopkt[0]);
 		    switch (iopkt[0])
 		    {
 			case 0x90: /* read bytes */
