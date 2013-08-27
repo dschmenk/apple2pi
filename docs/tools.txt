@@ -1,0 +1,164 @@
+1.0 Introduction:
+================
+This documents the utilities included in the Apple II Pi project.  See the project README.md for installation instructions.
+
+2.0 Contents:
+=============
+
+	Interactive tools
+	-----------------
+	a2mon		- Apple 1 like monitor
+	bintomon	- Binary to monitor format converter
+	a2term		- Apple II console
+
+	Development tools
+	-----------------
+	bload		- Load binary file
+	brun		- Run binary file
+	a2lib.c		- Simple a2pid connection library
+	
+	Disk image tools
+	----------------
+	
+	dskread		- Read disk image
+	dskwrite	- Write disk image
+	
+	Supplemental files
+	------------------
+	
+	a2slideshow.mon	- Famous slideshow program in monitor format
+	a2slideshow.bin - Famous slideshow program binary
+	execfile	- Sample exec file for a2term
+
+	Other files
+	-----------
+	
+	a2serclk	- Raspberry Pi GPCLK for Apple II Pi hardware
+        a2pid           - Apple II Pi Linux daemon
+        A2Pi.PO
+
+3.0 Interactive Tools:
+======================
+These tools are used to interact with the Apple II from the keyboard and screen.  As real Linux tools, they can also accept I/O redirection to automate keyboard input and capture output.  The other common ability (with the exception of bintomon) of the tools is to be able to connect to Apple II Pi remotely over the network.  A final, optional argument is the IP address of the Apple II Pi computer.  The tools can be built for a multitude of Linux and Unix computers and run remotely, connecting to the Apple II Pi.
+
+3.1 a2mon:
+----------
+The Apple 1 has a very simple monitor program that can examine and change memory, as well as execute code.  a2mon is modelled after that monitor.  As such, it isn't very powerful, but can be a valuable tool when combined with I/O redirection.  You can incorporate complete programs in the monitor format, or just change a few bytes of memory. Calling code in RAM or ROM is simple.
+
+There is a concept of current address.  To specify an address, just enter it first on the command line.  To change memory contents, enter a colon either after a specific address or by it self to use the current address followed by the bytes separated by spaces.  Reading a range of memory involves specifying two address separated by a period. To begin execution of code (run) at a specific address or current address, type 'r'.  Finally, 'q', will quit the session and return.
+
+Run as:
+
+a2mon [IP addr]
+
+3.2 bintomon:
+-------------
+Converting a binary file to a monitor input format can be accomplished with bintomon.  The command is run as:
+
+bintomon <hex address> <filename> [IP addr]
+
+standard output can be redirected to save the formatted text or piped into a2mon.
+
+3.3 a2term:
+-----------
+Probably the most interesting of the tools, a2term connects the Linux console to the Apple II console.  a2term connects to the Apple II running ProDOS BASIC. This is roughly equivalent to using an old serial terminal connected to a Super Serial Card and issuing commands to redirect the keyboard and screen I/O hooks.
+
+AppleSoft programs, ProDOS commands, and Monitor commands are all available.  Like a2mon, the input and output can be redirected to files for automated keyboard input and ouput capture. Similar to running the EXEC command from ProDOS (and DOS 3.3).  To quit, use the ESC-Q sequence.  To send an actual ESC character, press ESC twice. The DELETE key has been remapped to BACKSPACE for convenience.
+
+There are some limitations that have to be followed.  The screen editing/cursor movement keys are not available.  As mentioned before, the DELETE key now backspaces to aid editing.  Do NOT leave AppleSoft BASIC, or the mouse and keyboard will be disconnected from Apple II Pi and you will have to re-start BASIC.SYSTEM from the A2PI boot disk. If you run a program that doesn't do any screen or keyboard I/O, you will see that your mouse and keyboard are no longer reponsive.  Apple II Pi relies on the screen and keyboard I/O hooks to provide the co-operative tasking between Apple II programs and Pi input events. CTRL-C will usually break into an AppleSoft program (may take a few trys) but machine code that isn't responding will require a press of RESET.  Not to worry, Apple II Pi will resync and return to BASIC (assuming memory hasn't been overwritten).  In drastic cases, an Apple II reboot may be necessary.  Apple II Pi will resync and you may continue on.
+
+Run as:
+
+a2term  [IP addr]
+
+4.0 Development Tools:
+======================
+Apple II Pi really shines as a development environment for the Apple II.  To aid in the rapid development process, these tools were created to test binaries created in the Pi's native environment on the actual Apple II.
+
+4.1 bload:
+----------
+bload will read a file from the Linux filesystem and copy it into the Apple II memory at the address specified.  Apple II Pi incorporated a relatively fast communications channel so this operation is about as fast as reading from the floppy.  Run as:
+
+bload <filename> <address> [IP addr]
+
+Hexadecimal addresses are entered in '0x' format otherwise decimal addresses are assumed.
+
+4.2 brun:
+---------
+Like bload, brun will load the binary file but will also jump to the loading address.  Run as:
+
+brun <filename> <address> [IP addr]
+
+4.3 a2lib.c:
+------------
+All the tools include a2lib.c as a very poor, cheesy, horrible, etc. way to implement the Apple II Pi daemon API.  Only useful if you are looking to write your own tool or modify the code of the existing tools.
+
+5.0 Floppy Disk Image Tools:
+============================
+Getting floppy disk image files to and from actual floppy drives has been greatly simplified with the wonderful tools like ADTPro.  For most sophisticated image transfer applications, use something lie ADTPro.  However, when something cheap, quick, and dirty will suffice, these two tools can make fast work of reading or writing disk images. Both of these tools only work on a 5 1/4 floppy drive in drive 1 of slot 6.  The only image format they support is the ProDOS order: .PO
+
+5.1 dskread:
+------------
+dskread will read the disk in the floppy drive and create a disk image using the volume name on the floppy for the filename.  If the disk volume is HELLO, HELLO.PO is the name of the resulting disk image file.  Run as:
+
+dskread [IP addr]
+
+5.2 dskwrite:
+-------------
+Simple, jst like dskread.  dskwrite is run as:
+
+dskwrite <filename> [IP addr]
+
+It will prompt you to overwrite the current volume name.  'Y' or 'y' will proceed and the floppy will be written.
+
+6.0 Supplemtal Files:
+=====================
+Thes files are supplements to the tools to demonstrate their operation.
+
+6.1 a2slideshow.mon:
+--------------------
+Use with a2mon as:
+
+a2mon < a2slideshow.mon
+
+Press ESC to leave the slideshow.  The slideshow is displayed on the Apple II screen, not the Pis's screen.
+
+6.2 a2slideshow.bin
+-------------------
+Use with brun as:
+
+brun a2slideshow.bin 0x2000
+
+Press ESC to leave the slideshow.  The slideshow is displayed on the Apple II screen, not the Pis's screen.
+
+6.3 execfile:
+-------------
+Use with a2term as:
+
+a2term < execfile
+
+Watch it automate AppleSoft.
+
+7.0 Other Files:
+================
+These are the other files in the distribution.
+
+7.1 a2serclk:
+-------------
+
+The Apple II Pi add-on card for the Apple IIe is a very minimal design that taked advantage of the built in General Purpose I/O (GPIO) pins of the Raspberry Pi.  One of those pins is programmed by a2serclk to provide the clocking signal to the 6551 ACIA chip on the add-on card, thus saving a $2 crystal oscillator.  Not needed if you are using an Apple //c or Super Serial Card in an Apple IIe to communicate to the Raspberry Pi.
+
+7.2 a2pid:
+----------
+The Linux daemon.  See a2pid.txt.
+
+7.3 A2PI.PO:
+------------
+The Apple II client device driver.  See a2pid.txt.
+
+8.0 Conclusion:
+===============
+These tools are all very simple but adhere to the Unix principle of minimal funcionality with flexible I/O.  They can be combined with shell scripts to create powerful commands.  Feel free to add more.
+
+Enjoy,
+	Dave Schmenk

@@ -1,0 +1,26 @@
+1.0 Introduction:
+=================
+Apple II Pi is a combination of Apple II code, Linux code, and a serial port connection (either cable or optional plug-in card for the Apple IIe).  It integrates the Apple II ProDOS world into the Raspbian Linux world of the Raspberry Pi, thus creating Apple II Pi.
+
+2.0 a2pid:
+==========
+On the Linux side, the Apple II Pi daemon runs in the background, listening to the Apple II on a serial port connection, listening on TCP/IP port 6502 for Linux client connections, and managing the insertion of Apple II keyboard and mouse events into the Linux input subsytem.  It's not something normally visisble, but is the traffic cop between the Apple II, Linux input events, and Linux client programs that interact with the Apple II.
+
+2.1 Keyboard Mapping:
+=====================
+a2pid is responsible for mapping the ASCII characters from the Apple II keyboard into modern scancodes used by the Linux input subsystem. Because of the limited number of keys, the Open-Apple and Closed-Apple keys are used as modifiers to the other keys.  Open-Apple is mapped to the ALT key. Closed-Apple is used as a FN modifier key: it alters the arrow keys to HOME, END, PGUP, and PGDN.  It also converts the number ksys into F1-F10 equivalents.  Closed-Apple-DELETE becomes DEL instead of BACKSPACE.  Two special key sequences have a backdoor function for Apple II Pi.  Closed-Apple-ESC will exit the Apple II client code, returning keyboard control back to the Apple II. If you want to resume interaction with the Linux daemon, you can either press RESET, re-run the A2PI:STARTUP program, or reboot the A2PI floppy.  The Open-Apple-Closed-Apple-ESC sequence will exit both the Apple II client and the Linux a2pid daemon.  This is useful for installing new code, or restarting a2pid in non-daemom mode for debugging purposes.
+
+3.0 a2serclk:
+=============
+a2serclk is the utility required when using the optional plug-in card for Apple II Pi.  Otherwise, it isn't needed.
+
+4.0 A2PI.PO:
+============
+The ProDOS disk image file.  Inside you will find ProDOS version 1.9, MERLIN8 version 2.59 assembler, BASIC.SYSTEM version 1.5, and the STARTUP program that loads the A2PI device driver.  A2PI.S is the source to the device driver developed using the MERLIN8 assembler.  The device driver is loaded into the upper ProDOS BASIC buffer space so it won't interfere with BASIC programs.  However, leaving BASIC will disconnect the A2PI driver and keyboard/mouse operations won't be seen in Linux until STARTUP is re-run from BASIC.
+
+5.0 Conclusion:
+===============
+The programs that make up the foundation of Apple II Pi should be hidden from sight and "just work".  Check out tools.txt for the programs that interact with the Apple II Pi environment.
+
+Enjoy,
+        Dave Schmenk
