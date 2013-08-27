@@ -6,4 +6,5 @@ clean:
 	rm $(BIN) *~
 
 install:
+	$(BASH) ./install.sh
 	cp $(BIN) /usr/local/bin
