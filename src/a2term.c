@@ -132,6 +132,7 @@ int main(int argc, char **argv)
 				{
 				    cin = 0x1B;
 				    state = STOP;
+				    break;
 				}
 			    }
 			}
