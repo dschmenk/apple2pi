@@ -28,7 +28,7 @@
 #define MAX_XFER        32
 
 struct a2request {
-    int  fd;
+    int  idx;
     int  type;
     int  addr;
     int  count;
@@ -36,7 +36,18 @@ struct a2request {
     char *buffer;
     struct a2request *next;
 } *a2reqlist = NULL, *a2reqfree = NULL;
+/*
+ * Client info
+ */
+#define	CLIENT_OPEN	1
+#define	CLIENT_CLOSING	2
+#define	CLIENT_COUT	4
+#define MAX_CLIENT	8
 
+struct {
+    int fd;
+    int flags;
+} a2client[MAX_CLIENT];
 /*
  * ASCII to scancode conversion
  */
@@ -451,7 +462,7 @@ void prlog(char *str)
     if (!isdaemon)
 	puts(str);
 }
-struct a2request *addreq(int a2fd, int reqfd, int type, int addr, int count, char *buffer)
+struct a2request *addreq(int a2fd, int clidx, int type, int addr, int count, char *buffer)
 {
     char rwchar;
     struct a2request *a2req = a2reqfree;
@@ -459,7 +470,7 @@ struct a2request *addreq(int a2fd, int reqfd, int type, int addr, int count, cha
 	a2req = malloc(sizeof(struct a2request));
     else
 	a2reqfree = a2reqfree->next;
-    a2req->fd     = reqfd;
+    a2req->idx    = clidx;
     a2req->type   = type;
     a2req->addr   = addr;
     a2req->count  = count;
@@ -502,13 +513,13 @@ void finreq(int a2fd, int status, int result)
     /*
      * Send result to socket.
      */
-    if (a2req->fd)
+    if (a2client[a2req->idx].flags & CLIENT_OPEN)
     {
 	if (a2req->type == 0x90) /* read bytes */
-	    write(a2req->fd, a2req->buffer, a2req->count);
+	    write(a2client[a2req->idx].fd, a2req->buffer, a2req->count);
 	finbuf[0] = status;
 	finbuf[1] = result;
-	write(a2req->fd, finbuf, 2);
+	write(a2client[a2req->idx].fd, finbuf, 2);
     }
     if (a2req->buffer)
     {
@@ -522,34 +533,53 @@ void finreq(int a2fd, int status, int result)
     a2req->next = a2reqfree;
     a2reqfree   = a2req;
 }
-void flushreqs(int a2fd, int status, int result)
+void flushreqs(int a2fd, int clidx, int status, int result)
 {
     char finbuf[2];
-    struct a2request *a2req;
-    while (a2req = a2reqlist)
+    struct a2request *a2req = a2reqlist, *a2reqprev = NULL;
+    while (a2req)
     {
-        /*
-         * Send result to socket.
-         */
-        if (a2req->fd)
-        {
-	    if (a2req->type == 0x90) /* read bytes */
-		write(a2req->fd, a2req->buffer, a2req->count);
-	    finbuf[0] = status;
-	    finbuf[1] = result;
-	    write(a2req->fd, finbuf, 2);
-        }
-        if (a2req->buffer)
-        {
-	    free(a2req->buffer);
-	    a2req->buffer = NULL;
-        }
-        /*
-         * Update lists.
-         */
-        a2reqlist   = a2req->next;
-        a2req->next = a2reqfree;
-        a2reqfree   = a2req;
+	if (clidx < 0 || clidx == a2req->idx)
+	{
+	    /*
+	     * Send result to socket.
+	     */
+	    if (a2client[a2req->idx].flags & CLIENT_OPEN)
+	    {
+		if (a2req->type == 0x90) /* read bytes */
+		    write(a2client[a2req->idx].fd, a2req->buffer, a2req->count);
+		finbuf[0] = status;
+		finbuf[1] = result;
+		write(a2client[a2req->idx].fd, finbuf, 2);
+	    }
+	    if (a2req->buffer)
+	    {
+		free(a2req->buffer);
+		a2req->buffer = NULL;
+	    }
+	    /*
+	     * Update lists.
+	     */
+	    if (a2req == a2reqlist)
+	    {
+		a2reqlist   = a2req->next;
+		a2req->next = a2reqfree;
+		a2reqfree   = a2req;
+		a2req       = a2reqlist;
+	    }
+	    else
+	    {
+		a2reqprev->next = a2req->next;
+		a2req->next     = a2reqfree;
+		a2reqfree       = a2req;
+		a2req           = a2reqprev->next;
+	    }
+	}
+	else
+	{
+	    a2reqprev = a2req;
+	    a2req     = a2req->next;
+	}
     }
 }
 void main(int argc, char **argv)
@@ -557,8 +587,8 @@ void main(int argc, char **argv)
     struct uinput_user_dev uidev;
     struct termios oldtio,newtio;
     unsigned char iopkt[16];
-    int i, c, lastbtn, cout;
-    int a2fd, kbdfd, moufd, srvfd, reqfd, coutfd, maxfd;
+    int i, c, rdycnt;
+    int a2fd, kbdfd, moufd, srvfd, maxfd;
     struct sockaddr_in servaddr;
     fd_set readset, openset;
     char *devtty = "/dev/ttyAMA0"; /* default for Raspberry Pi */
@@ -730,33 +760,43 @@ void main(int argc, char **argv)
 	die("error: socket create");
     if (bind(srvfd,(struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
 	die("error: bind socket");
-    if (listen(srvfd, 1) < 0)
+    if (listen(srvfd, MAX_CLIENT - 1) < 0)
 	die("error: listen socket");
     /*
      * Come basck here on RESET.
      */
 reset:
     state = RUN;
-    cout  = -1;
-    reqfd = coutfd = 0;
+    for (i = 0; i < MAX_CLIENT; i++)
+    {
+	a2client[i].fd    = 0;
+	a2client[i].flags = 0;
+    }
+    maxfd = 0;
     FD_ZERO(&openset);
     FD_SET(a2fd,  &openset);
     FD_SET(srvfd, &openset);
-    maxfd = a2fd > srvfd ? a2fd : srvfd;
     /*
      * Event loop
      */
     prlog("a2pid: Enter event loop\n");
     while (state == RUN)
     {
+	if (maxfd == 0)
+	{
+	    maxfd = a2fd > srvfd ? a2fd : srvfd;
+	    for (i = 0; i < MAX_CLIENT; i++)
+		maxfd = a2client[i].fd > maxfd ? a2client[i].fd : maxfd;
+	}
 	memcpy(&readset, &openset, sizeof(openset));
-	if (select(maxfd + 1, &readset, NULL, NULL, NULL) > 0)
+	if ((rdycnt = select(maxfd + 1, &readset, NULL, NULL, NULL)) > 0)
 	{
 	    /*
 	     * Serial port to Apple II transaction.
 	     */
 	    if (FD_ISSET(a2fd, &readset))
 	    {
+		rdycnt--;
 		if (read(a2fd, iopkt, 3) == 3)
 		{
 		    // printf("a2pi: A2 Event [0x%02X] [0x%02X] [0x%02X]\n", iopkt[0], iopkt[1], iopkt[2]);
@@ -767,7 +807,7 @@ reset:
 			    iopkt[0] = 0x81;  /* acknowledge */
 			    write(a2fd, iopkt, 1);
 			    tcflush(a2fd, TCIFLUSH);
-			    flushreqs(a2fd, -1, -1);
+			    flushreqs(a2fd, 0, -1, -1);
 			    break;                                
 			case 0x82: /* keyboard event */
 			    // printf("Keyboard Event: 0x%02X:%c\n", iopkt[1], iopkt[2] & 0x7F);
@@ -866,10 +906,9 @@ reset:
 				state = RESET;
 			    break;
 			case 0x98: /* get output char from Apple II */
-			    if (coutfd)
-				write(coutfd, iopkt, 2);
-			    else
-				cout = iopkt[1];
+			    for (i = 0; i < MAX_CLIENT; i++)
+				if (a2client[i].flags & CLIENT_COUT)
+				    write(a2client[i].fd, iopkt, 2);
 			    break;
 			case 0x9E: /* request complete ok */
 			case 0x9F: /* request complete error */
@@ -900,117 +939,133 @@ reset:
 		else
 		{
 		    prlog("a2pid: error read serial port ????\n");
-		    state = RESET;
+		    state = STOP;
 		}
 	    }
 	    /*
-	     * Socket server connection.
+	     * Open client connection.
 	     */
 	    if (FD_ISSET(srvfd, &readset))
 	    {
-		reqfd = accept(srvfd, NULL, NULL);
-		if (reqfd > 0)
-		    FD_SET(reqfd, &openset);
+		rdycnt--;
+		int clientfd = accept(srvfd, NULL, NULL);
+		if (clientfd >= 0)
+		{
+		    for (i = 0; i < MAX_CLIENT; i++)
+		    {
+			if (a2client[i].flags == 0)
+			{
+			    a2client[i].fd    = clientfd;
+			    a2client[i].flags = CLIENT_OPEN;
+			    FD_SET(a2client[i].fd, &openset);
+			    maxfd = a2client[i].fd > maxfd ? a2client[i].fd : maxfd;
+			    prlog("a2pi: Client Connect\n");
+			    break;
+			}
+		    }
+		    if (i >= MAX_CLIENT)
+			/*
+			 * Out of client structures.
+			 */
+			close(clientfd);
+		}
 		else
 		    prlog("a2pid: error accept");
-		maxfd = reqfd > maxfd ? reqfd : maxfd;
-		prlog("a2pi: Client Connect\n");
 	    }
 	    /*
 	     * Socket client request.
 	     */
-	    if (reqfd > 0 && FD_ISSET(reqfd, &readset))
+	    for (i = 0; rdycnt > 0 && i < MAX_CLIENT; i++)
 	    {
-		int addr, count;
-		char *databuf;
-		if (read(reqfd, iopkt, 1) == 1)
+		if (a2client[i].flags && FD_ISSET(a2client[i].fd, &readset))
 		{
-		    // printf("a2pi: Client Request [0x%02X]\n", iopkt[0]);
-		    switch (iopkt[0])
+		    int addr, count;
+		    char *databuf;
+		    rdycnt--;
+		    if (read(a2client[i].fd, iopkt, 1) == 1)
 		    {
-			case 0x90: /* read bytes */
-			    if (read(reqfd, iopkt, 4) == 4)
-			    {
-				addr  = (unsigned char)iopkt[0] | ((unsigned char)iopkt[1] << 8);
-				count = (unsigned char)iopkt[2] | ((unsigned char)iopkt[3] << 8);
-				if (count)
+			// printf("a2pi: Client Request [0x%02X]\n", iopkt[0]);
+			switch (iopkt[0])
+			{
+			    case 0x90: /* read bytes */
+				if (read(a2client[i].fd, iopkt, 4) == 4)
 				{
-				    databuf = malloc(count);
-				    addreq(a2fd, reqfd, 0x90, addr, count, databuf);
+				    addr  = (unsigned char)iopkt[0] | ((unsigned char)iopkt[1] << 8);
+				    count = (unsigned char)iopkt[2] | ((unsigned char)iopkt[3] << 8);
+				    if (count)
+				    {
+					databuf = malloc(count);
+					addreq(a2fd, i, 0x90, addr, count, databuf);
+				    }
+				    else
+				    {
+					iopkt[0] = 0x9E;
+					iopkt[1] = 0x00;
+					write(a2client[i].fd, iopkt, 2);
+				    }
 				}
-				else
+				break;
+			    case 0x92: /* write bytes */
+				if (read(a2client[i].fd, iopkt, 4) == 4)
 				{
-				    iopkt[0] = 0x9E;
-				    iopkt[1] = 0x00;
-				    write(reqfd, iopkt, 2);
+				    addr  = (unsigned char)iopkt[0] | ((unsigned char)iopkt[1] << 8);
+				    count = (unsigned char)iopkt[2] | ((unsigned char)iopkt[3] << 8);
+				    if (count)
+				    {
+					databuf = malloc(count);
+					if (read(a2client[i].fd, databuf, count) == count)
+					    addreq(a2fd, i, 0x92, addr, count, databuf);
+				    }
+				    else
+				    {
+					iopkt[0] = 0x9E;
+					iopkt[1] = 0x00;
+					write(a2client[i].fd, iopkt, 2);
+				    }
 				}
-			    }
-			    break;
-			case 0x92: /* write bytes */
-			    if (read(reqfd, iopkt, 4) == 4)
-			    {
-				addr  = (unsigned char)iopkt[0] | ((unsigned char)iopkt[1] << 8);
-				count = (unsigned char)iopkt[2] | ((unsigned char)iopkt[3] << 8);
-				if (count)
+				break;
+			    case 0x94: /* call */
+				if (read(a2client[i].fd, iopkt, 2) == 2)
 				{
-				    databuf = malloc(count);
-				    if (read(reqfd, databuf, count) == count)
-					addreq(a2fd, reqfd, 0x92, addr, count, databuf);
+				    addr  = (unsigned char)iopkt[0] | ((unsigned char)iopkt[1] << 8);
+				    addreq(a2fd, i, 0x94, addr, 0, NULL);
 				}
-				else
-				{
-				    iopkt[0] = 0x9E;
-				    iopkt[1] = 0x00;
-				    write(reqfd, iopkt, 2);
-				}
-			    }
-			    break;
-			case 0x94: /* call */
-			    if (read(reqfd, iopkt, 2) == 2)
-			    {
-				addr  = (unsigned char)iopkt[0] | ((unsigned char)iopkt[1] << 8);
-				addreq(a2fd, reqfd, 0x94, addr, 0, NULL);
-			    }
-			    break;
-			case 0x96: /* send input char to Apple II */
-			    if (read(reqfd, iopkt, 1) == 1)
-				addreq(a2fd, reqfd, 0x96, iopkt[0], 0, NULL);
-			    break;
-			case 0x98: /* get output chars from Apple II */
-			    if (cout >= 0)
-			    {
-				iopkt[1] = cout;
-				write(reqfd, iopkt, 2);
-				cout = -1;
-			    }
-			    coutfd = reqfd;
-			    break;
-			case 0xFF: /* close */
-			    FD_CLR(reqfd, &openset);
-			    close(reqfd);
-			    reqfd  = 0;
-			    coutfd = 0;
-			    maxfd  = a2fd > srvfd ? a2fd : srvfd;
-			    break;
-			default:
-			    prlog("a2pid: Unknown Request\n");
+				break;
+			    case 0x96: /* send input char to Apple II */
+				if (read(a2client[i].fd, iopkt, 1) == 1)
+				    addreq(a2fd, i, 0x96, iopkt[0], 0, NULL);
+				break;
+			    case 0x98: /* get output chars from Apple II */
+				a2client[i].flags |= CLIENT_COUT;
+				break;
+			    case 0xFF: /* close */
+				a2client[i].flags = CLIENT_CLOSING;
+				break;
+			    default:
+				prlog("a2pid: Unknown Request\n");
+			}
 		    }
-		}
-		else
-		{
-		    FD_CLR(reqfd, &openset);
-		    close(reqfd);
-		    reqfd  = 0;
-		    coutfd = 0;
-		    maxfd  = a2fd > srvfd ? a2fd : srvfd;
-		    prlog("a2pid: error read socket ????");
+		    else
+		    {
+			/*
+			 * Close client socket connection.
+			 */
+			FD_CLR(a2client[i].fd, &openset);
+			close(a2client[i].fd);
+			if (a2client[i].fd >= maxfd)
+			    maxfd = 0;
+			a2client[i].fd    = 0;
+			a2client[i].flags = 0;
+			flushreqs(a2fd, i, -1, -1);
+		    }
 		}
 	    }
 	}
     }
-    flushreqs(a2fd, -1, -1);
-    if (reqfd > 0)
-	close(reqfd);
+    flushreqs(a2fd, -1, -1, -1);
+    for (i = 0; i < MAX_CLIENT; i++)
+	if (a2client[i].flags)
+	    close(a2client[i].fd);
     if (state == RESET)
 	goto reset;
     shutdown(srvfd, SHUT_RDWR);
