@@ -22,5 +22,6 @@ if [ -f /etc/rc.local ] ; then
 	if ! grep a2pid /etc/rc.local > /dev/null ; then
 		mv /etc/rc.local /etc/rc.local.bak
 		sed -e '/^exit/i\# Start Apple II Pi' -e '/^exit/i\/usr/local/bin/a2serclk' -e '/^exit/i\/usr/local/bin/a2pid --daemon' /etc/rc.local.bak > /etc/rc.local
+		chmod +x /etc/rc.local
 	fi
 fi
