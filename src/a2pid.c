@@ -998,8 +998,12 @@ reset:
 		}
 		else
 		{
+		    FD_CLR(reqfd, &openset);
+		    close(reqfd);
+		    reqfd  = 0;
+		    coutfd = 0;
+		    maxfd  = a2fd > srvfd ? a2fd : srvfd;
 		    prlog("a2pid: error read socket ????");
-		    state = RESET;
 		}
 	    }
 	}
