@@ -43,7 +43,7 @@ These tools are used to interact with the Apple II from the keyboard and screen.
 
 3.1 a2mon:
 ----------
-The Apple 1 has a very simple monitor program that can examine and change memory, as well as execute code.  a2mon is modelled after that monitor.  As such, it isn't very powerful, but can be a valuable tool when combined with I/O redirection.  You can incorporate complete programs in the monitor format, or just change a few bytes of memory. Calling code in RAM or ROM is simple.
+The Apple 1 has a very simple monitor program that can examine and change memory, as well as execute code.  a2mon is modeled after that monitor.  As such, it isn't very powerful, but can be a valuable tool when combined with I/O redirection.  You can incorporate complete programs in the monitor format, or just change a few bytes of memory. Calling code in RAM or ROM is simple.
 
 There is a concept of current address.  To specify an address, just enter it first on the command line.  To change memory contents, enter a colon either after a specific address or by it self to use the current address followed by the bytes separated by spaces.  Reading a range of memory involves specifying two address separated by a period. To begin execution of code (run) at a specific address or current address, type 'r'.  Finally, 'q', will quit the session and return.
 
@@ -69,7 +69,7 @@ There are some limitations that have to be followed.  The screen editing/cursor 
 
 Run as:
 
-a2term  [IP addr]
+a2term [IP addr]
 
 4.0 Development Tools:
 ======================
