@@ -26,7 +26,6 @@ int main(int argc, char **argv)
 	a2close(pifd);
 	exit(EXIT_FAILURE);
     }
-    sleep(1);
     fflush(stdin);
     if ((binfile = fopen(argv[1], "rb")))
     {

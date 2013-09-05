@@ -381,16 +381,16 @@ void sendkeycodeup(int fd, int code)
     }
     write(fd, &evsync, sizeof(evsync));
 }
+static int prevkeycode = -1;
 void sendkey(int fd, int mod, int key)
 {
-    static int prevcode = -1;
     int code = keycode[(mod & MOD_FN) | (key & KEY_ASCII)]
 	| ((mod << 8) & MOD_ALT);
     
-    if (prevcode >= 0)
+    if (prevkeycode >= 0)
     {
-	sendkeycodeup(fd, prevcode);
-	if (!(key & KEY_PRESS) && ((code & KEY_CODE) != (prevcode & KEY_CODE)))
+	sendkeycodeup(fd, prevkeycode);
+	if (!(key & KEY_PRESS) && ((code & KEY_CODE) != (prevkeycode & KEY_CODE)))
 	    /*
 	     * missed a key down event
 	     * synthesize one
@@ -408,7 +408,10 @@ void sendkey(int fd, int mod, int key)
 	     */
 	    sendkeycodeup(fd, code);
     }
-    prevcode = (key & KEY_PRESS) ? code : -1;
+    prevkeycode = (key & KEY_PRESS) ? code : -1;
+}
+void flushkey(int fd)
+{
 }
 void sendbttn(int fd, int mod, int bttn)
 {
@@ -887,6 +890,11 @@ reset:
 				    state = RESET;
 				newtio.c_cc[VMIN]  = 3; /* blocking read until 3 chars received */
 				tcsetattr(a2fd, TCSANOW, &newtio);
+				if (prevkeycode >= 0)
+				{
+				    sendkeycodeup(kbdfd, prevkeycode);
+				    prevkeycode = -1;
+				}
 			    }
 			    else
 				state = RESET;

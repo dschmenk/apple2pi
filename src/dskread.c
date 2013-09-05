@@ -41,7 +41,6 @@ int main(int argc, char **argv)
 	perror("Unable to connect to Apple II Pi");
 	exit(EXIT_FAILURE);
     }
-    sleep(1);
     a2write(pifd, ORG, sizeof(online),  online);
     a2call(pifd, ORG, &result);
     a2read(pifd, DATA_BUFFER, 16, volname);
