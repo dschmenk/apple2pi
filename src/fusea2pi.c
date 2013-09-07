@@ -641,9 +641,9 @@ static int prodos_map_errno(int perr)
 static int cache_get_file_info(const char *path, int *access, int *type, int *aux, int *storage, int *numblks, int *size, int *mod, int *create)
 {
     char dirpath[128], filename[32];
-    unsigned char *entry, prodos_name[65];
+    unsigned char *entry, prodos_name[65], data_buff[512];
     int refnum, iblk, entrylen, entriesblk, filecnt, io_buff = 0;
-    int i, dl, l = strlen(path);
+    int iscached, i, dl, l = strlen(path);
     
     for (dl = l - 1; dl; dl--)
 	if (path[dl] == '/')
@@ -667,7 +667,8 @@ static int cache_get_file_info(const char *path, int *access, int *type, int *au
 	strncpy(dirpath, path, dl);
 	dirpath[dl] = '\0';
 	//printf("Match path %s to cached dir %s\n", dirpath, cachepath);
-	if (strcmp(dirpath, cachepath) == 0)
+	iscached = (strcmp(dirpath, cachepath) == 0);
+	if (iscached || (refnum = prodos_open(prodos_path(dirpath, NULL, NULL, NULL), &io_buff)) > 0)
 	{
 	    strcpy(filename, path + dl + 1);
 	    l = l - dl - 1;
@@ -678,46 +679,73 @@ static int cache_get_file_info(const char *path, int *access, int *type, int *au
 	    }
 	    //printf("Match filename %s len %d\n", filename, l);
 	    iblk = 0;
-	    entrylen   = cachedata[0][0x23];
-	    entriesblk = cachedata[0][0x24];
-	    filecnt    = cachedata[0][0x25] + cachedata[0][0x26] * 256;
-	    entry      = &cachedata[0][4] + entrylen;
 	    //printf("Cached entrylen = %d, filecnt = %d\n", entrylen, filecnt);
 	    do
 	    {
-		for (i = (iblk == 0) ? 1 : 0; i < entriesblk && filecnt; i++)
+		if (iscached || prodos_read(refnum, data_buff, 512) == 512)
 		{
-		    if (entry[0])
+		    if (iscached)
 		    {
-			entry[(entry[0] & 0x0F) + 1] = 0;
-			//printf("Searching directory entry: %s len %d\n", entry + 1, entry[0] & 0x0F);
-			if ((entry[0] & 0x0F) == l)
+			if (iblk == 0)
 			{
-			    //printf("Compare %s with %s\n", entry + 1, filename);
-			    if (strncmp(entry + 1, filename, l) == 0)
-			    {
-				*storage = entry[0x00] >> 4;
-				*type    = entry[0x10];
-				*access  = entry[0x1E];
-				*aux     = entry[0x1F] + entry[0x20] * 256;
-				*numblks = entry[0x13] + entry[0x14] * 256;
-				*size    = entry[0x15] + entry[0x16] * 256 + entry[0x17] * 65536;
-				*mod     = entry[0x21] | (entry[0x22] << 8)
-				    | (entry[0x23] << 16) | (entry[0x24] << 24);
-				*create  = entry[0x18] | (entry[0x19] << 8)
-				    | (entry[0x1A] << 16) | (entry[0x1B] << 24);
-				//printf("Cache hit: %s access = $%02X, type = $%02X, aux = $%04X, storage = $%02X, size = %d\n", filename, *access, *type, *aux, *storage, *size);
-				return 0;
-			    }
+			    entrylen   = cachedata[0][0x23];
+			    entriesblk = cachedata[0][0x24];
+			    filecnt    = cachedata[0][0x25] + cachedata[0][0x26] * 256;
+			    entry      = &cachedata[0][4] + entrylen;
 			}
-			entry += entrylen;
-			filecnt--;
+			else
+			    entry      = &cachedata[0][4];
+		    }
+		    else
+		    {
+			if (iblk == 0)
+			{
+			    entrylen   = data_buff[0x23];
+			    entriesblk = data_buff[0x24];
+			    filecnt    = data_buff[0x25] + data_buff[0x26] * 256;
+			    entry      = &data_buff[4] + entrylen;
+			}
+			else
+			    entry = &data_buff[4];
+		    }
+		    for (i = (iblk == 0) ? 1 : 0; i < entriesblk && filecnt; i++)
+		    {
+			if (entry[0])
+			{
+			    //entry[(entry[0] & 0x0F) + 1] = 0;
+			    //printf("Searching directory entry: %s len %d\n", entry + 1, entry[0] & 0x0F);
+			    if ((entry[0] & 0x0F) == l)
+			    {
+				//printf("Compare %s with %s\n", entry + 1, filename);
+				if (strncmp(entry + 1, filename, l) == 0)
+				{
+				    *storage = entry[0x00] >> 4;
+				    *type    = entry[0x10];
+				    *access  = entry[0x1E];
+				    *aux     = entry[0x1F] + entry[0x20] * 256;
+				    *numblks = entry[0x13] + entry[0x14] * 256;
+				    *size    = entry[0x15] + entry[0x16] * 256 + entry[0x17] * 65536;
+				    *mod     = entry[0x21] | (entry[0x22] << 8)
+					| (entry[0x23] << 16) | (entry[0x24] << 24);
+				    *create  = entry[0x18] | (entry[0x19] << 8)
+					| (entry[0x1A] << 16) | (entry[0x1B] << 24);
+				    //printf("Cache hit: %s access = $%02X, type = $%02X, aux = $%04X, storage = $%02X, size = %d\n", filename, *access, *type, *aux, *storage, *size);
+				    if (!iscached)
+					prodos_close(refnum, &io_buff);
+				    return 0;
+				}
+			    }
+			    entry += entrylen;
+			    filecnt--;
+			}
 		    }
 		}
-		if (++iblk > CACHE_BLOCKS_MAX)
-		    break;
-		entry = &cachedata[iblk][4];
+		else
+		    filecnt = 0;
+		iblk++;
 	    } while (filecnt != 0);
+	    if (!iscached)
+		prodos_close(refnum, &io_buff);
 	}
 	if (prodos_get_file_info(prodos_path(path, NULL, NULL, prodos_name), access, type, aux, storage, numblks, mod, create) == 0)
 	{
@@ -857,7 +885,10 @@ static int a2pi_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 			}
 		    }
 		    if (++iblk > CACHE_BLOCKS_MAX)
+		    {
 			cachepath[0] == '\0';
+			iblk = 1;
+		    }
 		}
 		else
 		    filecnt = 0;
