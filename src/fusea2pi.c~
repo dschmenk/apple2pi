@@ -173,6 +173,7 @@ static unsigned char *prodos_path(const char *uname, int *type, int *aux, unsign
 }
 static unsigned int prodos_time(int year, int month, int day, int hour, int minute)
 {
+    year -= 1900;
     if (year > 99)
 	year -= 100;
     month += 1;
