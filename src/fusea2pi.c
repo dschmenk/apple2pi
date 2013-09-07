@@ -194,7 +194,7 @@ struct stat *unix_stat(struct stat *stbuf, int storage, int access, int blocks, 
     memset(stbuf, 0, sizeof(struct stat));
     if (storage == 0x0F || storage == 0x0D)
     {
-	stbuf->st_mode = (access & 0xC3 == 0xC3) ? S_IFDIR | 0777 : S_IFDIR | 0444;
+	stbuf->st_mode = (access & 0xC3 == 0xC3) ? S_IFDIR | 0755 : S_IFDIR | 0544;
 	stbuf->st_nlink = 2;
     }
     else
@@ -749,7 +749,7 @@ static int a2pi_getattr(const char *path, struct stat *stbuf)
 	/*
 	 * Root directory of volumes.
 	 */
-	unix_stat(stbuf, 0x0F, 0xE3, 0, 0, 0, 0);
+	unix_stat(stbuf, 0x0F, 0x01, 0, 0, 0, 0);
     }
     else
     {
