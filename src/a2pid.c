@@ -25,7 +25,7 @@
 /*
  * Apple II request entry
  */
-#define MAX_XFER        32
+#define MAX_XFER        64
 
 struct a2request {
     int  idx;

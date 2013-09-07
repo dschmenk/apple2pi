@@ -46,6 +46,7 @@ int main(int argc, char **argv)
 	perror("Usage: dskwrite <filename> [ip address]\n");
 	exit(EXIT_FAILURE);
     }
+    sleep(1);
     fflush(stdin);
     a2write(pifd, ORG, sizeof(online),  online);
     a2call(pifd, ORG, &result);
