@@ -198,12 +198,12 @@ struct stat *unix_stat(struct stat *stbuf, int storage, int access, int blocks, 
     memset(stbuf, 0, sizeof(struct stat));
     if (storage == 0x0F || storage == 0x0D)
     {
-	stbuf->st_mode = (access & 0xC3 == 0xC3) ? S_IFDIR | 0755 : S_IFDIR | 0544;
+	stbuf->st_mode = (access & 0xC3 == 0xC3) ? S_IFDIR | 0744 : S_IFDIR | 0544;
 	stbuf->st_nlink = 2;
     }
     else
     {
-	stbuf->st_mode   = (access & 0xC3 == 0xC3) ? S_IFREG | 0666 : S_IFREG | 0444;
+	stbuf->st_mode   = (access & 0xC3 == 0xC3) ? S_IFREG | 0644 : S_IFREG | 0444;
 	stbuf->st_nlink  = 1;
 	stbuf->st_blocks = blocks;
 	stbuf->st_size   = size;
@@ -243,6 +243,20 @@ static int prodos_free_io_buff(int buf)
 #define prodos_alloc_io_buff()	PRODOS_IO_BUFFER
 #define	prodos_free_io_buff(b)
 #endif
+
+static unsigned int prodos_update_time(void)
+{
+    char time_buff[4];
+    time_t now = time(NULL);
+    struct tm *tm = localtime(&now);
+    int ptime = prodos_time(tm->tm_year, tm->tm_mon, tm->tm_mday, tm->tm_hour, tm->tm_min);
+    time_buff[0] = (unsigned char) ptime;
+    time_buff[1] = (unsigned char) (ptime >> 8);
+    time_buff[2] = (unsigned char) (ptime >> 16);
+    time_buff[3] = (unsigned char) (ptime >> 24);
+    return a2write(pifd, 0xBF90, 4, time_buff);
+}
+
 static int prodos_open(unsigned char *prodos_path, int *io_buff)
 {
     unsigned char refnum;
@@ -281,6 +295,7 @@ static int prodos_close(int refnum, int *io_buff)
 {
     int result;
     
+    prodos_update_time();
     if (io_buff && *io_buff != 0)
     {
 	prodos_free_io_buff(*io_buff);
@@ -423,6 +438,7 @@ static int prodos_on_line(int unit, char *data_buff)
 {
     int result;
     
+    prodos_update_time();
     prodos[PRODOS_CMD]        = PRODOS_ON_LINE;
     prodos[PRODOS_PARAM_CNT]  = 2;
     prodos[PRODOS_PARAMS + 1] = (unsigned char) unit;
@@ -441,6 +457,7 @@ static int prodos_set_file_info(unsigned char *prodos_path, int access, int type
 {
     int result;
     
+    prodos_update_time();
     a2write(pifd, PRODOS_DATA_BUFFER, prodos_path[0] + 1,  prodos_path);
     prodos[PRODOS_CMD]         = PRODOS_SET_FILE_INFO;
     prodos[PRODOS_PARAM_CNT]   = 7;
@@ -516,6 +533,7 @@ static int prodos_rename(unsigned char *from, unsigned char *to)
 {
     int result;
     
+    prodos_update_time();
     a2write(pifd, PRODOS_DATA_BUFFER,       from[0] + 1, from);
     a2write(pifd, PRODOS_DATA_BUFFER + 256, to[0]   + 1, to);
     prodos[PRODOS_CMD]        = PRODOS_RENAME;
@@ -533,6 +551,7 @@ static int prodos_destroy(unsigned char *prodos_path)
 {
     int result;
 
+    prodos_update_time();
     a2write(pifd, PRODOS_DATA_BUFFER, prodos_path[0] + 1,  prodos_path);
     prodos[PRODOS_CMD]        = PRODOS_DESTROY;
     prodos[PRODOS_PARAM_CNT]  = 1;
@@ -547,6 +566,7 @@ static int prodos_create(unsigned char *prodos_path, char access, char type, int
 {
     int result;
 
+    prodos_update_time();
     a2write(pifd, PRODOS_DATA_BUFFER, prodos_path[0] + 1,  prodos_path);
     prodos[PRODOS_CMD]         = PRODOS_CREATE;
     prodos[PRODOS_PARAM_CNT]   = 7;
@@ -926,11 +946,8 @@ static int a2pi_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
 static int a2pi_mkdir(const char *path, mode_t mode)
 {
-    time_t now = time(NULL);
-    struct tm *tm = localtime(&now);
-    int create = prodos_time(tm->tm_year, tm->tm_mon, tm->tm_mday, tm->tm_hour, tm->tm_min);
     cachepath[0] = '\0';
-    return prodos_map_errno(prodos_create(prodos_path(path, NULL, NULL, NULL), 0xE3, 0x0F, create, create));
+    return prodos_map_errno(prodos_create(prodos_path(path, NULL, NULL, NULL), 0xE3, 0x0F, 0, 0));
 }
 
 static int a2pi_remove(const char *path)
@@ -957,7 +974,7 @@ static int a2pi_chmod(const char *path, mode_t mode)
 	access  = (mode & 0x04) ? 0x01 : 0x00;
 	access |= (mode & 0x02) ? 0xC2 : 0x00;
 	cachepath[0] = '\0';
-	return prodos_map_errno(prodos_set_file_info(prodos_path(path, NULL, NULL, NULL), access, type, aux, mod, create));
+	return prodos_map_errno(prodos_set_file_info(prodos_path(path, NULL, NULL, NULL), access, type, aux, 0, 0));
     }
     return -ENOENT;
 }
@@ -1025,29 +1042,15 @@ static int a2pi_create(const char * path, mode_t mode, struct fuse_file_info *fi
 {
     unsigned char prodos_name[65];
     int refnum, type, aux, io_buff = 0;
-    time_t now = time(NULL);
-    struct tm *tm = localtime(&now);
-    int create = prodos_time(tm->tm_year, tm->tm_mon, tm->tm_mday, tm->tm_hour, tm->tm_min);
     cachepath[0] = '\0';
     if ((refnum = prodos_open(prodos_path(path, &type, &aux, prodos_name), &io_buff)) == -PRODOS_ERR_FILE_NOT_FND)
-	return prodos_map_errno(prodos_create(prodos_name, 0xC3, type, aux, create));
+	return prodos_map_errno(prodos_create(prodos_name, 0xC3, type, aux, 0));
     if (refnum == 0)
     {
 	prodos_set_eof(refnum, 0);
 	prodos_close(refnum, &io_buff);
     }
     return prodos_map_errno(refnum);
-}
-
-int a2pi_ftruncate(const char *path, off_t offset, struct fuse_file_info *fi)
-{
-    cachepath[0] = '\0';
-    return a2pi_truncate(path, offset);
-}
-
-int a2pi_fgetattr(const char *path, struct stat *stbuf, struct fuse_file_info *fi)
-{
-    return a2pi_getattr(path, stbuf);
 }
 
 static int a2pi_statfs(const char *path, struct statvfs *stbuf)
@@ -1067,7 +1070,7 @@ static int a2pi_statfs(const char *path, struct statvfs *stbuf)
     {
 	stbuf->f_bsize   = 512;
 	stbuf->f_fsid    = 0xa2;
-//	stbuf->f_namelen = 22; /* include space for #typeattrib */
+	stbuf->f_namemax = 22; /* include space for #typeattrib */
 	stbuf->f_blocks  = aux;
 	stbuf->f_bfree   = 
 	stbuf->f_bavail  = aux - numblks;
@@ -1079,7 +1082,7 @@ static int a2pi_statfs(const char *path, struct statvfs *stbuf)
 int a2pi_utimens(const char *path, const struct timespec tv[2])
 {
     int access, type, aux, storage, size, numblks, mod, create, refnum, io_buff = 0;
-    struct tm *tm = localtime(&tv[0].tv_sec);
+    struct tm *tm = localtime(&tv[1].tv_sec);
     cachepath[0] = '\0';
     /*
      * Get file info.
@@ -1090,7 +1093,7 @@ int a2pi_utimens(const char *path, const struct timespec tv[2])
 						     type,
 						     aux,
 						     prodos_time(tm->tm_year, tm->tm_mon, tm->tm_mday, tm->tm_hour, tm->tm_min),
-						     create));
+						     0));
     return -ENOENT;
 }
 
@@ -1108,8 +1111,6 @@ static struct fuse_operations a2pi_oper = {
     .read	= a2pi_read,
     .write	= a2pi_write,
     .create	= a2pi_create,
-    .ftruncate	= a2pi_ftruncate,
-    .fgetattr	= a2pi_fgetattr,
     .statfs	= a2pi_statfs,
     .utimens	= a2pi_utimens,
 };
