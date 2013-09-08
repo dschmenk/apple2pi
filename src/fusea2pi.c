@@ -215,6 +215,7 @@ struct stat *unix_stat(struct stat *stbuf, int storage, int access, int blocks, 
 /*
  * ProDOS calls to Apple II Pi.
  */
+#if 0
 static int io_buff_mask = 0;
 static int prodos_alloc_io_buff(void)
 {
@@ -223,18 +224,25 @@ static int prodos_alloc_io_buff(void)
 	if ((io_buff_mask & (1 << i)) == 0)
 	{
 	    io_buff_mask |= (1 << i);
+	    //printf("Alloc io_buff $%04X\n", PRODOS_IO_BUFFER + PRODOS_IO_BUFFER_LEN * i);
 	    return (PRODOS_IO_BUFFER + PRODOS_IO_BUFFER_LEN * i);
 	}
     return 0;
 }
+
 static int prodos_free_io_buff(int buf)
 {
+    //printf("Free io_buff $%04X\n", buf);
     if (buf < PRODOS_IO_BUFFER || buf > (PRODOS_IO_BUFFER + PRODOS_IO_BUFFER_LEN * PRODOS_IO_BUFFER_NUM))
 	return -1;
     int i = (buf - PRODOS_IO_BUFFER) / PRODOS_IO_BUFFER_LEN;
     io_buff_mask &= ~(1 << i);
     return i;
 }
+#else
+#define prodos_alloc_io_buff()	PRODOS_IO_BUFFER
+#define	prodos_free_io_buff(b)
+#endif
 static int prodos_open(unsigned char *prodos_path, int *io_buff)
 {
     unsigned char refnum;
@@ -261,8 +269,12 @@ static int prodos_open(unsigned char *prodos_path, int *io_buff)
 	    a2read(pifd, PRODOS_PARAM_BUFFER + 5, 1, &refnum);
 	    return refnum;
 	}
+	prodos_free_io_buff(*io_buff);
+	*io_buff = 0;
     	return -result;
     }
+    prodos_free_io_buff(*io_buff);
+    *io_buff = 0;
     return -PRODOS_ERR_UNKNOWN;
 }
 static int prodos_close(int refnum, int *io_buff)
@@ -613,6 +625,7 @@ static int prodos_map_errno(int perr)
 	    case -PRODOS_ERR_ACCESS:
 	    case -PRODOS_ERR_FILE_OPEN:
 	    case -PRODOS_ERR_DUP_VOL:
+	    case -PRODOS_ERR_VOL_DIR_FULL:
 		uerr = -EACCES;
 		break;
 	    case -PRODOS_ERR_BAD_CMD:
@@ -629,9 +642,7 @@ static int prodos_map_errno(int perr)
 	    case -PRODOS_ERR_BAD_BITMAP:
 	    case -PRODOS_ERR_BAD_BUF_ADDR:
 	    case -PRODOS_ERR_UNKNOWN:
-
 	    case -PRODOS_ERR_FCB_FULL:
-	    case -PRODOS_ERR_VOL_DIR_FULL:
 	    case -PRODOS_ERR_VCB_FULL:
 	    case -PRODOS_ERR_POS_RANGE:
 		uerr = -1;
@@ -1000,8 +1011,8 @@ static int a2pi_write(const char *path, const char *buf, size_t size, off_t offs
     
     if ((refnum = prodos_open(prodos_path(path, NULL, NULL, NULL), &io_buff)) > 0)
     {
-	if (offset && prodos_set_mark(refnum, offset) == -PRODOS_ERR_EOF)
-	    size = 0;
+	if (offset)
+	    prodos_set_mark(refnum, offset);
 	if (size)
 	    size = prodos_write(refnum, buf, size);
 	prodos_close(refnum, &io_buff);
