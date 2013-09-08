@@ -98,7 +98,7 @@ static int pifd = 0;
  */
 #define CACHE_BLOCKS_MAX	16
 static char cachepath[128] = "";
-static unsigned char cachedata[512][CACHE_BLOCKS_MAX]; /* !!! Is this enough !!! */
+static unsigned char cachedata[CACHE_BLOCKS_MAX][512]; /* !!! Is this enough !!! */
 static unsigned char volumes[256];
 /*
  * Filename & date/time conversion routines.
@@ -283,7 +283,7 @@ static int prodos_close(int refnum, int *io_buff)
     return -PRODOS_ERR_UNKNOWN;
 }
 static int prodos_read(int refnum, char *data_buff, int req_xfer)
-{
+ {
     int result, short_req, short_xfer, total_xfer = 0;
 
     prodos[PRODOS_CMD]        = PRODOS_READ;
@@ -671,7 +671,7 @@ static int cache_get_file_info(const char *path, int *access, int *type, int *au
 	strncpy(dirpath, path, dl);
 	dirpath[dl] = '\0';
 	//printf("Match path %s to cached dir %s\n", dirpath, cachepath);
-	iscached = (strcmp(dirpath, cachepath) == 0);
+	iscached =(strcmp(dirpath, cachepath) == 0);
 	if (iscached || (refnum = prodos_open(prodos_path(dirpath, NULL, NULL, NULL), &io_buff)) > 0)
 	{
 	    strcpy(filename, path + dl + 1);
@@ -683,7 +683,6 @@ static int cache_get_file_info(const char *path, int *access, int *type, int *au
 	    }
 	    //printf("Match filename %s len %d\n", filename, l);
 	    iblk = 0;
-	    //printf("Cached entrylen = %d, filecnt = %d\n", entrylen, filecnt);
 	    do
 	    {
 		if (iscached || prodos_read(refnum, data_buff, 512) == 512)
@@ -696,9 +695,10 @@ static int cache_get_file_info(const char *path, int *access, int *type, int *au
 			    entriesblk = cachedata[0][0x24];
 			    filecnt    = cachedata[0][0x25] + cachedata[0][0x26] * 256;
 			    entry      = &cachedata[0][4] + entrylen;
+			    //printf("Cached entrylen = %d, filecnt = %d\n", entrylen, filecnt);
 			}
 			else
-			    entry      = &cachedata[0][4];
+			    entry      = &cachedata[iblk][4];
 		    }
 		    else
 		    {
@@ -708,6 +708,7 @@ static int cache_get_file_info(const char *path, int *access, int *type, int *au
 			    entriesblk = data_buff[0x24];
 			    filecnt    = data_buff[0x25] + data_buff[0x26] * 256;
 			    entry      = &data_buff[4] + entrylen;
+			    //printf("Uncached entrylen = %d, filecnt = %d\n", entrylen, filecnt);
 			}
 			else
 			    entry = &data_buff[4];
@@ -716,8 +717,7 @@ static int cache_get_file_info(const char *path, int *access, int *type, int *au
 		    {
 			if (entry[0])
 			{
-			    //entry[(entry[0] & 0x0F) + 1] = 0;
-			    //printf("Searching directory entry: %s len %d\n", entry + 1, entry[0] & 0x0F);
+			    //entry[(entry[0] & 0x0F) + 1] = 0; printf("Searching directory entry: %s len %d\n", entry + 1, entry[0] & 0x0F);
 			    if ((entry[0] & 0x0F) == l)
 			    {
 				//printf("Compare %s with %s\n", entry + 1, filename);
@@ -753,7 +753,7 @@ static int cache_get_file_info(const char *path, int *access, int *type, int *au
 	}
 	if (prodos_get_file_info(prodos_path(path, NULL, NULL, prodos_name), access, type, aux, storage, numblks, mod, create) == 0)
 	{
-	    //printf("prodos: %s access = $%02X, type = $%02X, aux = $%04X, storage = $%02X\n", path, *access, *type, *aux, *storage);
+	    //printf("get_file_indfo: %s access = $%02X, type = $%02X, aux = $%04X, storage = $%02X\n", path, *access, *type, *aux, *storage);
 	    if (*storage == 0x0F || *storage == 0x0D)
 		*size = 0;
 	    else
@@ -859,6 +859,7 @@ static int a2pi_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	    iblk = 0;
 	    do
 	    {
+		//if (!iscached) printf("Fill cache block %d\n", iblk);
 		if (iscached || prodos_read(refnum, cachedata[iblk], 512) == 512)
 		{
 		    entry = &cachedata[iblk][4];
@@ -868,6 +869,7 @@ static int a2pi_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 			entriesblk = cachedata[0][0x24];
 			filecnt    = cachedata[0][0x25] + cachedata[0][0x26] * 256;
 			entry      = entry + entrylen;
+			//printf("Fill cache entrylen = %d, filecnt = %d\n", entrylen, filecnt);
 		    }
 		    for (i = (iblk == 0) ? 1 : 0; i < entriesblk && filecnt; i++)
 		    {
@@ -890,8 +892,9 @@ static int a2pi_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		    }
 		    if (++iblk > CACHE_BLOCKS_MAX)
 		    {
-			cachepath[0] == '\0';
-			iblk = 1;
+			//printf("Cache overfill!\n");
+			path[0] == '\0'; /* invalidate cache path */
+			iblk = 1;        /* wrap iblk around      */
 		    }
 		}
 		else
@@ -899,6 +902,7 @@ static int a2pi_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	    } while (filecnt != 0);
 	    if (!iscached)
 	    {
+		//printf("Cache %d directory blocks\n", iblk);
 		prodos_close(refnum, &io_buff);
 		strcpy(cachepath, path);
 	    }
@@ -1016,6 +1020,11 @@ static int a2pi_create(const char * path, mode_t mode, struct fuse_file_info *fi
     cachepath[0] = '\0';
     if ((refnum = prodos_open(prodos_path(path, &type, &aux, prodos_name), &io_buff)) == -PRODOS_ERR_FILE_NOT_FND)
 	return prodos_map_errno(prodos_create(prodos_name, 0xC3, type, aux, create));
+    if (refnum == 0)
+    {
+	prodos_set_eof(refnum, 0);
+	prodos_close(refnum, &io_buff);
+    }
     return prodos_map_errno(refnum);
 }
 
