@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <pthread.h>
 #include <errno.h>
 #include <sys/time.h>
 
@@ -94,12 +95,24 @@ static unsigned char prodos[32] = {
  */
 static int pifd = 0;
 /*
+ * Handy macros.
+ */
+#define	IS_ROOT_DIR(p)		(dirlen(p) == 0)
+/*
  * Cached directory blocks.
  */
+#define	IS_RAW_DEV(l,p)		((l)==8&&(p)[1]=='s'&&(p)[3]=='d'&&(p)[5]=='.'&&(p)[6]=='p'&&(p)[7]=='o')
 #define CACHE_BLOCKS_MAX	16
 static char cachepath[128] = "";
 static unsigned char cachedata[CACHE_BLOCKS_MAX][512]; /* !!! Is this enough !!! */
 static unsigned char volumes[256];
+static unsigned int volblks[16];
+/*
+ * Apple II Pi semaphore.
+ */
+pthread_mutex_t a2pi_busy = PTHREAD_MUTEX_INITIALIZER;
+#define	A2PI_WAIT	pthread_mutex_lock(&a2pi_busy)
+#define	A2PI_RELEASE	pthread_mutex_unlock(&a2pi_busy)
 /*
  * Filename & date/time conversion routines.
  */
@@ -120,7 +133,7 @@ static char *unix_name(unsigned char *pname, int type, int aux, char *uname)
 	uname = filename;
     l = pname[0] & 0x0F;
     strncpy(uname, pname + 1, l);
-    if (type != 0x0F) /* Directory type */
+    if (type != 0x0F && type < 0x100) /* not Directory/Raw type */
     {
 	uname[l + 0] = '#';
 	uname[l + 1] = hexchar(type >> 4);
@@ -215,7 +228,7 @@ struct stat *unix_stat(struct stat *stbuf, int storage, int access, int blocks, 
 /*
  * ProDOS calls to Apple II Pi.
  */
-#if 0
+#if 1
 static int io_buff_mask = 0;
 static int prodos_alloc_io_buff(void)
 {
@@ -249,12 +262,14 @@ static unsigned int prodos_update_time(void)
     char time_buff[4];
     time_t now = time(NULL);
     struct tm *tm = localtime(&now);
-    int ptime = prodos_time(tm->tm_year, tm->tm_mon, tm->tm_mday, tm->tm_hour, tm->tm_min);
+    int result, ptime = prodos_time(tm->tm_year, tm->tm_mon, tm->tm_mday, tm->tm_hour, tm->tm_min);
     time_buff[0] = (unsigned char) ptime;
     time_buff[1] = (unsigned char) (ptime >> 8);
     time_buff[2] = (unsigned char) (ptime >> 16);
     time_buff[3] = (unsigned char) (ptime >> 24);
-    return a2write(pifd, 0xBF90, 4, time_buff);
+    A2PI_WAIT;
+    result = a2write(pifd, 0xBF90, 4, time_buff);
+    A2PI_RELEASE;
 }
 
 static int prodos_open(unsigned char *prodos_path, int *io_buff)
@@ -262,6 +277,7 @@ static int prodos_open(unsigned char *prodos_path, int *io_buff)
     unsigned char refnum;
     int result;
     
+    A2PI_WAIT;
     a2write(pifd, PRODOS_DATA_BUFFER, prodos_path[0] + 1,  prodos_path);
     if (*io_buff == 0)
     {
@@ -281,15 +297,17 @@ static int prodos_open(unsigned char *prodos_path, int *io_buff)
 	if (result == 0)
 	{
 	    a2read(pifd, PRODOS_PARAM_BUFFER + 5, 1, &refnum);
+	    A2PI_RELEASE;
 	    return refnum;
 	}
 	prodos_free_io_buff(*io_buff);
-	*io_buff = 0;
-    	return -result;
     }
-    prodos_free_io_buff(*io_buff);
+    else
+	result = PRODOS_ERR_UNKNOWN;
+    prodos_free_io_buff(*io_buff);	
     *io_buff = 0;
-    return -PRODOS_ERR_UNKNOWN;
+    A2PI_RELEASE;
+    return -result;
 }
 static int prodos_close(int refnum, int *io_buff)
 {
@@ -304,9 +322,14 @@ static int prodos_close(int refnum, int *io_buff)
     prodos[PRODOS_CMD]        = PRODOS_CLOSE;
     prodos[PRODOS_PARAM_CNT]  = 1;
     prodos[PRODOS_PARAMS + 1] = refnum;
+    A2PI_WAIT;
     a2write(pifd, PRODOS_CALL, PRODOS_CALL_LEN + 1, prodos);
     if (a2call(pifd, PRODOS_CALL, &result))
-    	return -result;
+    {
+	A2PI_RELEASE;
+	return -result;
+    }
+    A2PI_RELEASE;
     return -PRODOS_ERR_UNKNOWN;
 }
 static int prodos_read(int refnum, char *data_buff, int req_xfer)
@@ -325,6 +348,7 @@ static int prodos_read(int refnum, char *data_buff, int req_xfer)
 	prodos[PRODOS_PARAMS + 5] = (unsigned char) (short_req >> 8);
 	prodos[PRODOS_PARAMS + 6] = 0;
 	prodos[PRODOS_PARAMS + 7] = 0;
+	A2PI_WAIT;
 	a2write(pifd, PRODOS_CALL, PRODOS_CALL_LEN + 7, prodos);
 	if (a2call(pifd, PRODOS_CALL, &result))
 	{
@@ -333,16 +357,24 @@ static int prodos_read(int refnum, char *data_buff, int req_xfer)
 		a2read(pifd, PRODOS_PARAM_BUFFER + 6, 2, prodos + PRODOS_PARAMS + 6);
 		if ((short_xfer = (unsigned char) prodos[PRODOS_PARAMS + 6] + (unsigned char)prodos[PRODOS_PARAMS + 7] * 256) > 0)
 		    a2read(pifd, PRODOS_DATA_BUFFER, short_xfer, data_buff + total_xfer);
+		A2PI_RELEASE;
 		req_xfer   -= short_xfer;
 		total_xfer += short_xfer;
 	    }
 	    else
+	    {
+		A2PI_RELEASE;
 		return (result == PRODOS_ERR_EOF || total_xfer) ? total_xfer : -result;
+	    }
 	}
 	else
+	{
+	    A2PI_RELEASE;
 	    return -PRODOS_ERR_UNKNOWN;
+	}
     }
-    return total_xfer;
+     A2PI_RELEASE;
+     return total_xfer;
 }
 static int prodos_write(int refnum, const char *data_buff, int req_xfer)
 {
@@ -354,6 +386,7 @@ static int prodos_write(int refnum, const char *data_buff, int req_xfer)
     while (req_xfer)
     {
 	short_req = (req_xfer > PRODOS_DATA_BUFFER_LEN) ? PRODOS_DATA_BUFFER_LEN : req_xfer;
+	A2PI_WAIT;
 	a2write(pifd, PRODOS_DATA_BUFFER, short_req, (char *)(data_buff + total_xfer));
 	prodos[PRODOS_PARAMS + 2] = (unsigned char) PRODOS_DATA_BUFFER;
 	prodos[PRODOS_PARAMS + 3] = (unsigned char) (PRODOS_DATA_BUFFER >> 8);
@@ -368,14 +401,21 @@ static int prodos_write(int refnum, const char *data_buff, int req_xfer)
 	    {
 		a2read(pifd, PRODOS_PARAM_BUFFER + 6, 2, prodos + PRODOS_PARAMS + 6);
 		short_xfer = (unsigned char) prodos[PRODOS_PARAMS + 6] + (unsigned char)prodos[PRODOS_PARAMS + 7] * 256;
+		A2PI_RELEASE;
 		req_xfer -= short_xfer;
 		total_xfer += short_xfer;
 	    }
 	    else
+	    {
+		A2PI_RELEASE;
 		return -result;
+	    }
 	}
 	else
+	{
+	    A2PI_RELEASE;
 	    return -PRODOS_ERR_UNKNOWN;
+	}
     }
     return total_xfer;
 }
@@ -389,10 +429,12 @@ static int prodos_set_mark(int refnum, int position)
     prodos[PRODOS_PARAMS + 2] = (unsigned char) position;
     prodos[PRODOS_PARAMS + 3] = (unsigned char) (position >> 8);
     prodos[PRODOS_PARAMS + 4] = (unsigned char) (position >> 16);
+    A2PI_WAIT;
     a2write(pifd, PRODOS_CALL, PRODOS_CALL_LEN + 4, prodos);
-    if (a2call(pifd, PRODOS_CALL, &result))
-    	return -result;
-    return -PRODOS_ERR_UNKNOWN;
+    if (!a2call(pifd, PRODOS_CALL, &result))
+	result -PRODOS_ERR_UNKNOWN;
+    A2PI_RELEASE;
+    return -result;
 }
 static int prodos_set_eof(int refnum, int position)
 {
@@ -404,10 +446,12 @@ static int prodos_set_eof(int refnum, int position)
     prodos[PRODOS_PARAMS + 2] = (unsigned char) position;
     prodos[PRODOS_PARAMS + 3] = (unsigned char) (position >> 8);
     prodos[PRODOS_PARAMS + 4] = (unsigned char) (position >> 16);
+    A2PI_WAIT;
     a2write(pifd, PRODOS_CALL, PRODOS_CALL_LEN + 4, prodos);
-    if (a2call(pifd, PRODOS_CALL, &result))
-    	return -result;
-    return -PRODOS_ERR_UNKNOWN;
+    if (!a2call(pifd, PRODOS_CALL, &result))
+	result -PRODOS_ERR_UNKNOWN;
+    A2PI_RELEASE;
+    return -result;
 }
 static int prodos_get_eof(int refnum)
 {
@@ -419,20 +463,24 @@ static int prodos_get_eof(int refnum)
     prodos[PRODOS_PARAMS + 2] = 0;
     prodos[PRODOS_PARAMS + 3] = 0;
     prodos[PRODOS_PARAMS + 4] = 0;
+    A2PI_WAIT;
     a2write(pifd, PRODOS_CALL, PRODOS_CALL_LEN + 4, prodos);
     if (a2call(pifd, PRODOS_CALL, &result))
     {
 	if (result == 0)
 	{
 	    a2read(pifd, PRODOS_PARAM_BUFFER + 2, 3, prodos + PRODOS_PARAMS + 2);
+	    A2PI_RELEASE;
 	    position = prodos[PRODOS_PARAMS + 2]
 		    + (prodos[PRODOS_PARAMS + 3] << 8)
 		    + (prodos[PRODOS_PARAMS + 4] << 16);
 	    return position;
 	}
-    	return -result;
     }
-    return -PRODOS_ERR_UNKNOWN;
+    else
+	result = PRODOS_ERR_UNKNOWN;
+    A2PI_RELEASE;
+    return -result;
 }
 static int prodos_on_line(int unit, char *data_buff)
 {
@@ -444,20 +492,24 @@ static int prodos_on_line(int unit, char *data_buff)
     prodos[PRODOS_PARAMS + 1] = (unsigned char) unit;
     prodos[PRODOS_PARAMS + 2] = (unsigned char) PRODOS_DATA_BUFFER;
     prodos[PRODOS_PARAMS + 3] = (unsigned char) (PRODOS_DATA_BUFFER >> 8);
+    A2PI_WAIT;
     a2write(pifd, PRODOS_CALL, PRODOS_CALL_LEN + 3, prodos);
     if (a2call(pifd, PRODOS_CALL, &result))
     {
 	if (result == 0)
 	    a2read(pifd, PRODOS_DATA_BUFFER, (unit == 0) ? 256 : 16, data_buff);
-    	return -result;
     }
-    return -PRODOS_ERR_UNKNOWN;
+    else
+	result = PRODOS_ERR_UNKNOWN;
+    A2PI_RELEASE;
+    return -result;
 }
 static int prodos_set_file_info(unsigned char *prodos_path, int access, int type, int aux, int mod, int create)
 {
     int result;
     
     prodos_update_time();
+    A2PI_WAIT;
     a2write(pifd, PRODOS_DATA_BUFFER, prodos_path[0] + 1,  prodos_path);
     prodos[PRODOS_CMD]         = PRODOS_SET_FILE_INFO;
     prodos[PRODOS_PARAM_CNT]   = 7;
@@ -475,14 +527,16 @@ static int prodos_set_file_info(unsigned char *prodos_path, int access, int type
     prodos[PRODOS_PARAMS + 12] = (unsigned char) create;
     prodos[PRODOS_PARAMS + 13] = (unsigned char) (create >> 8);
     a2write(pifd, PRODOS_CALL, PRODOS_CALL_LEN + 13, prodos);
-    if (a2call(pifd, PRODOS_CALL, &result))
-    	return -result;
-    return -PRODOS_ERR_UNKNOWN;
+    if (!a2call(pifd, PRODOS_CALL, &result))
+	result = PRODOS_ERR_UNKNOWN;
+    A2PI_RELEASE;
+    return -result;
 }
 static int prodos_get_file_info(unsigned char *prodos_path, int *access, int *type, int *aux, int *storage, int *numblks, int *mod, int *create)
 {
     int result;
     
+    A2PI_WAIT;
     a2write(pifd, PRODOS_DATA_BUFFER, prodos_path[0] + 1,  prodos_path);
     prodos[PRODOS_CMD]         = PRODOS_GET_FILE_INFO;
     prodos[PRODOS_PARAM_CNT]   = 10;
@@ -525,15 +579,18 @@ static int prodos_get_file_info(unsigned char *prodos_path, int *access, int *ty
 		    + (prodos[PRODOS_PARAMS + 16] << 16)
 		    + (prodos[PRODOS_PARAMS + 17] << 24);
 	}
-    	return -result;
     }
-    return -PRODOS_ERR_UNKNOWN;
+    else
+	result = PRODOS_ERR_UNKNOWN;
+    A2PI_RELEASE;
+    return -result;
 }
 static int prodos_rename(unsigned char *from, unsigned char *to)
 {
     int result;
     
     prodos_update_time();
+    A2PI_WAIT;
     a2write(pifd, PRODOS_DATA_BUFFER,       from[0] + 1, from);
     a2write(pifd, PRODOS_DATA_BUFFER + 256, to[0]   + 1, to);
     prodos[PRODOS_CMD]        = PRODOS_RENAME;
@@ -543,30 +600,34 @@ static int prodos_rename(unsigned char *from, unsigned char *to)
     prodos[PRODOS_PARAMS + 3] = (unsigned char) (PRODOS_DATA_BUFFER + 256);
     prodos[PRODOS_PARAMS + 4] = (unsigned char) (PRODOS_DATA_BUFFER + 256) >> 8;
     a2write(pifd, PRODOS_CALL, PRODOS_CALL_LEN + 4, prodos);
-    if (a2call(pifd, PRODOS_CALL, &result))
-    	return -result;
-    return -PRODOS_ERR_UNKNOWN;
+    if (!a2call(pifd, PRODOS_CALL, &result))
+	result = PRODOS_ERR_UNKNOWN;
+    A2PI_RELEASE;
+    return -result;
 }
 static int prodos_destroy(unsigned char *prodos_path)
 {
     int result;
 
     prodos_update_time();
+    A2PI_WAIT;
     a2write(pifd, PRODOS_DATA_BUFFER, prodos_path[0] + 1,  prodos_path);
     prodos[PRODOS_CMD]        = PRODOS_DESTROY;
     prodos[PRODOS_PARAM_CNT]  = 1;
     prodos[PRODOS_PARAMS + 1] = (unsigned char) PRODOS_DATA_BUFFER;
     prodos[PRODOS_PARAMS + 2] = (unsigned char) (PRODOS_DATA_BUFFER >> 8);
     a2write(pifd, PRODOS_CALL, PRODOS_CALL_LEN + 2, prodos);
-    if (a2call(pifd, PRODOS_CALL, &result))
-    	return -result;
-    return -PRODOS_ERR_UNKNOWN;
+    if (!a2call(pifd, PRODOS_CALL, &result))
+	result = PRODOS_ERR_UNKNOWN;
+    A2PI_RELEASE;
+    return -result;
 }
 static int prodos_create(unsigned char *prodos_path, char access, char type, int aux, int create)
 {
     int result;
 
     prodos_update_time();
+    A2PI_WAIT;
     a2write(pifd, PRODOS_DATA_BUFFER, prodos_path[0] + 1,  prodos_path);
     prodos[PRODOS_CMD]         = PRODOS_CREATE;
     prodos[PRODOS_PARAM_CNT]   = 7;
@@ -582,9 +643,10 @@ static int prodos_create(unsigned char *prodos_path, char access, char type, int
     prodos[PRODOS_PARAMS + 10] = (unsigned char) (create >> 16);
     prodos[PRODOS_PARAMS + 11] = (unsigned char) (create >> 24);
     a2write(pifd, PRODOS_CALL, PRODOS_CALL_LEN + 11, prodos);
-    if (a2call(pifd, PRODOS_CALL, &result))
-    	return -result;
-    return -PRODOS_ERR_UNKNOWN;
+    if (!a2call(pifd, PRODOS_CALL, &result))
+	result = PRODOS_ERR_UNKNOWN;
+    A2PI_RELEASE;
+    return -result;
 }
 static int prodos_read_block(int unit, char *data_buff, int block_num)
 {
@@ -597,21 +659,24 @@ static int prodos_read_block(int unit, char *data_buff, int block_num)
     prodos[PRODOS_PARAMS + 3] = (unsigned char) (PRODOS_DATA_BUFFER >> 8);
     prodos[PRODOS_PARAMS + 4] = (unsigned char) block_num;
     prodos[PRODOS_PARAMS + 5] = (unsigned char) (block_num >> 8);
+    A2PI_WAIT;
     a2write(pifd, PRODOS_CALL, PRODOS_CALL_LEN + 5, prodos);
     if (a2call(pifd, PRODOS_CALL, &result))
     {
 	if (result == 0)
 	    a2read(pifd, PRODOS_DATA_BUFFER, 512, data_buff);
-    	return -result;
     }
-    return -PRODOS_ERR_UNKNOWN;
+    else
+	result = PRODOS_ERR_UNKNOWN;
+    A2PI_RELEASE;
+    return -result;
 }
-static int prodos_write_block(int unit, char *data_buff, int block_num)
+static int prodos_write_block(int unit, const char *data_buff, int block_num)
 {
     int result;
     
-    if (a2write(pifd, PRODOS_DATA_BUFFER, 512, data_buff) != 0)
-	return -PRODOS_ERR_UNKNOWN;
+    A2PI_WAIT;
+    a2write(pifd, PRODOS_DATA_BUFFER, 512, (char *)data_buff);
     prodos[PRODOS_CMD]        = PRODOS_WRITE_BLOCK;
     prodos[PRODOS_PARAM_CNT]  = 3;
     prodos[PRODOS_PARAMS + 1] = (unsigned char) unit;
@@ -620,9 +685,10 @@ static int prodos_write_block(int unit, char *data_buff, int block_num)
     prodos[PRODOS_PARAMS + 4] = (unsigned char) block_num;
     prodos[PRODOS_PARAMS + 5] = (unsigned char) (block_num >> 8);
     a2write(pifd, PRODOS_CALL, PRODOS_CALL_LEN + 5, prodos);
-    if (a2call(pifd, PRODOS_CALL, &result))
-    	return -result;
-    return -PRODOS_ERR_UNKNOWN;
+    if (!a2call(pifd, PRODOS_CALL, &result))
+	result = PRODOS_ERR_UNKNOWN;
+    A2PI_RELEASE;
+    return -result;
 }
 static int prodos_map_errno(int perr)
 {
@@ -673,29 +739,54 @@ static int prodos_map_errno(int perr)
 /*
  * FUSE functions.
  */
+static int dirlen(const char *path)
+{
+    int dl;
+    for (dl = strlen(path) - 1; dl >= 0; dl--)
+	if (path[dl] == '/')
+	    return dl;
+    return -1;
+}
+
 static int cache_get_file_info(const char *path, int *access, int *type, int *aux, int *storage, int *numblks, int *size, int *mod, int *create)
 {
     char dirpath[128], filename[32];
     unsigned char *entry, prodos_name[65], data_buff[512];
     int refnum, iblk, entrylen, entriesblk, filecnt, io_buff = 0;
-    int iscached, i, dl, l = strlen(path);
+    int iscached, slot, drive, i, dl, l = strlen(path);
     
-    for (dl = l - 1; dl; dl--)
-	if (path[dl] == '/')
-	    break;
-    if (dl == 0)
+    if ((dl = dirlen(path)) == 0)
     {
-	/*
-	 * Volume directory
-	 */
-	*storage = 0x0F;
-	*type    = 0x0F;
-	*access  = 0xC3;
-	*aux     = 0;
-	*numblks = 0;
-	*size    = 0;
-	*mod     = 0;
-	*create  = 0;
+	if (IS_RAW_DEV(l, path))
+	{
+	    /*
+	     * Raw device.
+	     */
+	    slot     = (path[2] - '0') & 0x07;
+	    drive    = (path[4] - '1') & 0x01;
+	    *storage = 0x100;
+	    *type    = 0x00;
+	    *access  = 0xC3;
+	    *aux     = 0;
+	    *numblks = volblks[slot | (drive << 3)];
+	    *size    = *numblks*512;
+	    *mod     = 0;
+	    *create  = 0;
+	}
+	else
+	{
+	    /*
+	     * Volume directory.
+	     */
+	    *storage = 0x0F;
+	    *type    = 0x0F;
+	    *access  = 0xC3;
+	    *aux     = 0;
+	    *numblks = 0;
+	    *size    = 0;
+	    *mod     = 0;
+	    *create  = 0;
+	}
     }
     else
     {
@@ -854,9 +945,9 @@ static int a2pi_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		       off_t offset, struct fuse_file_info *fi)
 {
     unsigned char data_buff[512], filename[16], *entry;
-    int storage, access, type, numblks, size, aux, mod, create;
-    int i, l, iscached, refnum, iblk, entrylen, entriesblk, filecnt, io_buff = 0;
-    struct stat stentry;
+    int storage, access, type, blocks, size, aux, mod, create;
+    int i, l, iscached, slot, drive, refnum, iblk, entrylen, entriesblk, filecnt, io_buff = 0;
+    struct stat stentry, straw;
 
     (void) offset;
     (void) fi;
@@ -865,15 +956,32 @@ static int a2pi_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	/*
 	 * Root directory, fill with volume names.
 	 */
+	memset(&straw, 0, sizeof(struct stat));
 	unix_stat(&stentry, 0x0F, 0xC3, 0, 0, 0, 0);
 	filler(buf, ".", &stentry, 0);
 	filler(buf, "..", &stentry, 0);
 	for (i = 0; i < 256; i += 16)
 	    if ((l = volumes[i] & 0x0F))
 	    {
+		/*
+		 * Add volume directory.
+		 */
 		strncpy(filename, volumes + i + 1, l);
 		filename[l] = '\0';
 		filler(buf, filename, &stentry, 0);
+		/*
+		 * Add volume raw device.
+		 */
+		slot  = (volumes[i] >> 4) & 0x07;
+		drive = (volumes[i] >> 7) & 0x01;
+		strcpy(filename, "s0d0.po");
+		filename[1] = slot + '0';
+		filename[3] = drive + '1';
+		straw.st_mode   = S_IFREG | 0644;
+		straw.st_nlink  = 1;
+		straw.st_blocks = volblks[slot | (drive << 3)];
+		straw.st_size   = straw.st_blocks * 512;
+		filler(buf, filename, &straw, 0);
 	    }
     }
     else
@@ -910,13 +1018,13 @@ static int a2pi_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 			    type        = entry[0x10];
 			    access      = entry[0x1E];
 			    aux         = entry[0x1F] + entry[0x20] * 256;
-			    numblks     = entry[0x13] + entry[0x14] * 256;
+			    blocks      = entry[0x13] + entry[0x14] * 256;
 			    size        = entry[0x15] + entry[0x16] * 256 + entry[0x17] * 65536;
 			    mod         = entry[0x21] | (entry[0x22] << 8)
 					| (entry[0x23] << 16) | (entry[0x24] << 24);
 			    create      = entry[0x18] | (entry[0x19] << 8)
 					| (entry[0x1A] << 16) | (entry[0x1B] << 24);
-			    filler(buf, unix_name(entry, type, aux, NULL), unix_stat(&stentry, storage, access, numblks, size, mod, create), 0);
+			    filler(buf, unix_name(entry, type, aux, NULL), unix_stat(&stentry, storage, access, blocks, size, mod, create), 0);
 			    entry += entrylen;
 			    filecnt--;
 			}
@@ -946,12 +1054,16 @@ static int a2pi_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
 static int a2pi_mkdir(const char *path, mode_t mode)
 {
+    if (IS_ROOT_DIR(path))
+	return -EACCES;
     cachepath[0] = '\0';
     return prodos_map_errno(prodos_create(prodos_path(path, NULL, NULL, NULL), 0xE3, 0x0F, 0, 0));
 }
 
 static int a2pi_remove(const char *path)
 {
+    if (IS_ROOT_DIR(path))
+	return -EACCES;
     cachepath[0] = '\0';
     return prodos_map_errno(prodos_destroy(prodos_path(path, NULL, NULL, NULL)));
 }
@@ -959,6 +1071,9 @@ static int a2pi_remove(const char *path)
 static int a2pi_rename(const char *from, const char *to)
 {
     unsigned char prodos_from[65], prodos_to[65];
+
+    if (IS_ROOT_DIR(from) || IS_ROOT_DIR(to))
+	return -EACCES;
     prodos_path(from, NULL, NULL, prodos_from);
     prodos_path(to,   NULL, NULL, prodos_to);
     cachepath[0] = '\0';
@@ -969,6 +1084,8 @@ static int a2pi_chmod(const char *path, mode_t mode)
 {
     int access, type, aux, storage, size, numblks, mod, create;
 
+    if (IS_ROOT_DIR(path))
+	return -EACCES;
     if (cache_get_file_info(path, &access, &type, &aux, &storage, &numblks, &size, &mod, &create) == 0)
     {
 	access  = (mode & 0x04) ? 0x01 : 0x00;
@@ -983,6 +1100,8 @@ static int a2pi_truncate(const char *path, off_t size)
 {
     int refnum, io_buff = 0;
     
+    if (IS_ROOT_DIR(path))
+	return -EACCES;
     cachepath[0] = '\0';
     if ((refnum = prodos_open(prodos_path(path, NULL, NULL, NULL),  &io_buff)) > 0)
     {
@@ -994,8 +1113,19 @@ static int a2pi_truncate(const char *path, off_t size)
 
 static int a2pi_open(const char *path, struct fuse_file_info *fi)
 {
-    int refnum, io_buff = 0;
-    
+    int slot, drive, refnum, io_buff = 0;
+
+    if (IS_ROOT_DIR(path))
+    {
+	if (IS_RAW_DEV(strlen(path), path))
+	{
+	    slot     = (path[2] - '0') & 0x07;
+	    drive    = (path[4] - '1') & 0x01;
+	    if (volblks[slot | (drive << 3)] > 0)
+		return 0;
+	}
+	return -ENOENT;
+    }
     if ((refnum = prodos_open(prodos_path(path, NULL, NULL, NULL),  &io_buff)) > 0)
     {
 	return prodos_map_errno(prodos_close(refnum, &io_buff));
@@ -1005,8 +1135,37 @@ static int a2pi_open(const char *path, struct fuse_file_info *fi)
 
 static int a2pi_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
-    int refnum, io_buff = 0;
+    int slot, drive, unit, devsize, blkcnt, iblk, refnum, io_buff = 0;
     
+    if (IS_ROOT_DIR(path))
+    {
+	if (IS_RAW_DEV(strlen(path), path))
+	{
+	    slot     = (path[2] - '0') & 0x07;
+	    drive    = (path[4] - '1') & 0x01;
+	    unit     = (slot << 4) | (drive << 7);
+	    devsize  = volblks[slot | (drive << 3)] * 512;
+	    if (offset > devsize)
+		return 0;
+	    if ((offset + size) > devsize)
+		size = devsize - offset;
+	    if (offset & 0x01FF)
+		return 0; /* force block aligned reads */
+	    if (size & 0x01FF)
+		return 0; /* force block sized reads */
+	    blkcnt = size >> 9;
+	    iblk = offset >> 9;
+	    while (blkcnt--)
+	    {
+		if ((refnum = prodos_read_block(unit, buf, iblk)) < 0)
+		    return prodos_map_errno(refnum);
+		buf += 512;
+		iblk++;
+	    }
+	    return size;
+	}
+	return -ENOENT;
+    }
     if ((refnum = prodos_open(prodos_path(path, NULL, NULL, NULL), &io_buff)) > 0)
     {
 	if (offset && prodos_set_mark(refnum, offset) == -PRODOS_ERR_EOF)
@@ -1023,9 +1182,42 @@ static int a2pi_read(const char *path, char *buf, size_t size, off_t offset, str
 
 static int a2pi_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
-    int refnum, io_buff = 0;
+    int slot, drive, unit, devsize, blkcnt, iblk, refnum, io_buff = 0;
+
     cachepath[0] = '\0';
-    
+    if (IS_ROOT_DIR(path))
+    {
+#if 0	
+	if (IS_RAW_DEV(strlen(path), path))
+	{
+	    slot     = (path[2] - '0') & 0x07;
+	    drive    = (path[4] - '1') & 0x01;
+	    unit     = (slot << 4) | (drive << 7);
+	    devsize  = volblks[slot | (drive << 3)] * 512;
+	    if (offset > devsize)
+		return 0;
+	    if ((offset + size) > devsize)
+		size = devsize - offset;
+	    if (offset & 0x01FF)
+		return 0; /* force block aligned writes */
+	    if (size & 0x01FF)
+		return 0; /* force block sized writes */
+	    blkcnt = size >> 9;
+	    iblk = offset >> 9;
+	    while (blkcnt--)
+	    {
+		if ((refnum = prodos_write_block(unit, buf, iblk)) < 0)
+		    return prodos_map_errno(refnum);
+		buf += 512;
+		iblk++;
+	    }
+	    return size;
+	}
+	return -ENOENT;
+#else
+	return -EACCES;
+#endif
+    }
     if ((refnum = prodos_open(prodos_path(path, NULL, NULL, NULL), &io_buff)) > 0)
     {
 	if (offset)
@@ -1038,10 +1230,18 @@ static int a2pi_write(const char *path, const char *buf, size_t size, off_t offs
     return prodos_map_errno(refnum);
 }
 
+int a2pi_flush(const char *path, struct fuse_file_info *fi)
+{
+    return 0;
+}
+
 static int a2pi_create(const char * path, mode_t mode, struct fuse_file_info *fi)
 {
     unsigned char prodos_name[65];
     int refnum, type, aux, io_buff = 0;
+
+    if (IS_ROOT_DIR(path))
+	return -EACCES;
     cachepath[0] = '\0';
     if ((refnum = prodos_open(prodos_path(path, &type, &aux, prodos_name), &io_buff)) == -PRODOS_ERR_FILE_NOT_FND)
 	return prodos_map_errno(prodos_create(prodos_name, 0xC3, type, aux, 0));
@@ -1110,6 +1310,7 @@ static struct fuse_operations a2pi_oper = {
     .open	= a2pi_open,
     .read	= a2pi_read,
     .write	= a2pi_write,
+    .flush	= a2pi_flush,
     .create	= a2pi_create,
     .statfs	= a2pi_statfs,
     .utimens	= a2pi_utimens,
@@ -1117,6 +1318,9 @@ static struct fuse_operations a2pi_oper = {
 
 int main(int argc, char *argv[])
 {
+    int i, l, access, type, aux, storage, size, numblks, mod, create;
+    char volpath[17];
+    
     pifd = a2open("127.0.0.1");
     if (pifd < 0)
     {
@@ -1124,7 +1328,20 @@ int main(int argc, char *argv[])
 	exit(EXIT_FAILURE);
     }
     prodos_close(0, NULL);
-    prodos_on_line(0, volumes);
+    if (prodos_on_line(0, volumes))
+	exit(-1);
+    for (i = 0; i < 256; i += 16)
+	if ((l = volumes[i] & 0x0F) != 0)
+	{
+	    /*
+	     * Get volume size.
+	     */
+	    strncpy(volpath + 2, volumes + i + 1, l);
+	    volpath[0] = l + 1;
+	    volpath[1] = '/';
+	    prodos_get_file_info(volpath, &access, &type, &aux, &storage, &numblks, &mod, &create);
+	    volblks[volumes[i] >> 4] = aux;
+	}
     umask(0);
     return fuse_main(argc, argv, &a2pi_oper, NULL);
 }
