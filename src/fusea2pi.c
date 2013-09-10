@@ -71,7 +71,7 @@
 /*
  * ProDOS call template.
  */
-#define PRODOS_CALL    		0x0300
+#define PRODOS_CALL    		0x0301
 #define PRODOS_CALL_LEN    	0x08
 #define PRODOS_CMD	     	0x03
 #define	PRODOS_PARAMS		0x07
@@ -83,12 +83,12 @@
 #define	PRODOS_IO_BUFFER_LEN	0x0400
 #define PRODOS_IO_BUFFER_NUM	8
 static unsigned char prodos[32] = {
-// ORG @ $300
+// ORG @ $301
     0x20, 0x00, 0xBF, // JSR $BF00 (PRODOS)
     0x00,             // DB CMD
-    0x07, 0x03,       // DW PARAMS
+    0x08, 0x03,       // DW PARAMS
     0x60,             // RTS
-// PARAMS @ $307
+// PARAMS @ $308
     0x00             // PARAM_COUNT
 };
 /*
