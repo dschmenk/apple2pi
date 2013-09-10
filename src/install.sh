@@ -29,9 +29,3 @@ fi
 # Disable joystick as a mouse in X
 #
 cp 11-joy.conf /usr/share/X11/xorg.conf.d
-#
-# Create link to new joystick driver for gsportx
-#
-if [ ! -e /dev/js0 ] ; then
-	ln -s /dev/input/js0 /dev/js0
-fi
