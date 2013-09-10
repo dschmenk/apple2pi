@@ -1,4 +1,4 @@
-/*
+ /*
  * Copyright 2013, David Schmenk
  */
 #include "a2lib.c"
@@ -11,6 +11,8 @@
 #define	POLL_HZ		60	/* must be greater than 1 */
 struct timespec tv;
 struct input_event evkey, evrelx, evrely, evsync;
+#define PEN_UP		0
+#define PEN_DOWN	1
 #define	BTTN_IO		0xC061
 #define	READGP0		0x380
 #define	READGP1		0x388
@@ -39,7 +41,7 @@ static void sig_bye(int signo)
 void main(int argc, char **argv)
 {
     struct uinput_user_dev uidev;
-    int a2fd, joyfd, relx, rely, cntrx, cntry, gptoggle;
+    int a2fd, joyfd, relx, rely, pen, upx, upy, cntrx, cntry, gptoggle;
     unsigned char prevbttns[2], bttns[2];
     
     int pifd = a2open("127.0.0.1");
@@ -75,11 +77,11 @@ void main(int argc, char **argv)
     if (ioctl(joyfd, UI_SET_KEYBIT, BTN_RIGHT) < 0)
 	die("error: uinput ioctl BTN_RIGHT");
     if (ioctl(joyfd, UI_SET_EVBIT, EV_REL) < 0)
-	die("error: ioctl EV_rel");
+	die("error: ioctl EV_REL");
     if (ioctl(joyfd, UI_SET_RELBIT, REL_X) < 0)
-	die("error: ioctl rel_X");
+	die("error: ioctl REL_X");
     if (ioctl(joyfd, UI_SET_RELBIT, REL_Y) < 0)
-	die("error: ioctl rel_Y");
+	die("error: ioctl REL_Y");
     if (ioctl(joyfd, UI_SET_EVBIT, EV_SYN) < 0)
 	die("error: ioctl EV_SYN");
     bzero(&uidev, sizeof(uidev));
@@ -123,45 +125,53 @@ void main(int argc, char **argv)
     a2write(pifd, READGP0, sizeof(readgp), readgp);
     readgp[1] = 1;
     a2write(pifd, READGP1, sizeof(readgp), readgp);
+    a2quickcall(pifd, READGP0, &upx);
+    a2read(pifd, BTTN_IO, 2, prevbttns);
+    a2quickcall(pifd, READGP1, &upy);
+    gptoggle     = 0;
+    pen          = PEN_UP;
     evrelx.value = 0;
     evrely.value = 0;
-    a2quickcall(pifd, READGP0, &cntrx);
-    a2read(pifd, BTTN_IO, 2, prevbttns);
-    a2quickcall(pifd, READGP1, &cntry);
-    gptoggle = 0;
     /*
-     * Poll joystick loop.
+     * Poll joystick loop.a
      */
-    prdbg("a2joymou: Enter poll loop\n");
+    prdbg("a2joypad: Enter poll loop\n");
     while (!stop)
     {
 	if (gptoggle)
 	{
 	    a2quickcall(pifd, READGP0, &relx);
-	    if (relx >= cntrx + 20)		
-		evrelx.value = (relx - cntrx) / 2;
-	    else if (relx >= cntrx)		
-		evrelx.value = accel[relx - cntrx];
-	    else if (relx <= cntrx - 20)		
-		evrelx.value = (relx - cntrx) / 2;
-	    else		
-		evrelx.value = -accel[cntrx - relx];
-	    write(joyfd, &evrelx, sizeof(evrelx));
-	    write(joyfd, &evrely, sizeof(evrely));
-	    write(joyfd, &evsync, sizeof(evsync));
-	    if (isdebug) fprintf(stderr, "a2joymou (%d, %d) [%d %d]\n", relx, rely, bttns[0] >> 7, bttns[1] >> 7);
+	    if (relx == upx && rely == upy)
+	    {
+		if (pen == PEN_DOWN)
+		{
+		    evrelx.value = 0;
+		    evrely.value = 0;
+		    write(joyfd, &evrelx, sizeof(evrelx));
+		    write(joyfd, &evrely, sizeof(evrely));
+		    write(joyfd, &evsync, sizeof(evsync));
+		}
+		pen = PEN_UP;
+	    }
+	    else if (pen == PEN_UP && (relx != upx && rely != upy))
+	    {
+		pen   = PEN_DOWN;
+		cntrx = relx;
+		cntry = rely;
+	    }
+	    if (pen == PEN_DOWN)
+	    {
+		evrelx.value = (relx - cntrx);
+		evrely.value = (rely - cntry);
+		write(joyfd, &evrelx, sizeof(evrelx));
+		write(joyfd, &evrely, sizeof(evrely));
+		write(joyfd, &evsync, sizeof(evsync));
+	    }
+	    if (isdebug) fprintf(stderr, "a2joypad (%d, %d) [%d %d] pen=%d\n", relx, rely, bttns[0] >> 7, bttns[1] >> 7, pen);
 	}
 	else
 	{
 	    a2quickcall(pifd, READGP1, &rely);
-	    if (rely >= cntry + 20)		
-		evrely.value = (rely - cntry) / 2;
-	    else if (rely >= cntry)		
-		evrely.value = accel[rely - cntry];
-	    else if (rely <= cntry - 20)		
-		evrely.value = (rely - cntry) / 2;
-	    else		
-		evrely.value = -accel[cntry - rely];
 	}
 	gptoggle ^= 1;
 	a2read(pifd, BTTN_IO, 2, bttns);
@@ -180,5 +190,5 @@ void main(int argc, char **argv)
     a2close(pifd);
     ioctl(joyfd, UI_DEV_DESTROY);
     close(joyfd);
-    prdbg("\na2joymou: Exit\n");
+    prdbg("\na2joypad: Exit\n");
 }
