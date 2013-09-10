@@ -14,4 +14,4 @@ install:
 fuse-install: fusea2pi
 	cp fusea2pi /usr/local/bin
 	cp a2mount /usr/local/bin
-	chmod +x /usr/local/bin
+	chmod +x /usr/local/bin/a2mount
