@@ -956,7 +956,6 @@ static int a2pi_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	/*
 	 * Root directory, fill with volume names.
 	 */
-	memset(&straw, 0, sizeof(struct stat));
 	unix_stat(&stentry, 0x0F, 0xC3, 0, 0, 0, 0);
 	filler(buf, ".", &stentry, 0);
 	filler(buf, "..", &stentry, 0);
@@ -969,17 +968,22 @@ static int a2pi_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		strncpy(filename, volumes + i + 1, l);
 		filename[l] = '\0';
 		filler(buf, filename, &stentry, 0);
+	    }
+	memset(&straw, 0, sizeof(struct stat));
+	for (i = 0; i < 16; i++)
+	    if (volblks[i] > 0)
+	    {
 		/*
-		 * Add volume raw device.
+		 * Add raw device.
 		 */
-		slot  = (volumes[i] >> 4) & 0x07;
-		drive = (volumes[i] >> 7) & 0x01;
+		slot  = i & 0x07;
+		drive = (i >> 3) & 0x01;
 		strcpy(filename, "s0d0.po");
 		filename[1] = slot + '0';
 		filename[3] = drive + '1';
 		straw.st_mode   = S_IFREG | 0644;
 		straw.st_nlink  = 1;
-		straw.st_blocks = volblks[slot | (drive << 3)];
+		straw.st_blocks = volblks[i];
 		straw.st_size   = straw.st_blocks * 512;
 		filler(buf, filename, &straw, 0);
 	    }
@@ -1342,6 +1346,13 @@ int main(int argc, char *argv[])
 	    prodos_get_file_info(volpath, &access, &type, &aux, &storage, &numblks, &mod, &create);
 	    volblks[volumes[i] >> 4] = aux;
 	}
+    /*
+     * Always add 5 1/4 floppy raw devices.
+     */
+    if (volblks[0x06] == 0)
+	volblks[0x06] = 280;
+    if (volblks[0x0E] == 0)
+	volblks[0x0E] = 280;
     umask(0);
     return fuse_main(argc, argv, &a2pi_oper, NULL);
 }

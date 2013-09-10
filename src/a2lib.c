@@ -78,6 +78,18 @@ int a2write(int fd, int address, int count, char *buffer)
 int a2call(int fd, int address, int *result)
 {
     char callpkt[4];
+    callpkt[0] = 0x9A; // call with keyboard flush
+    callpkt[1] = address;
+    callpkt[2] = address >> 8;
+    write(fd, callpkt, 3);
+    read(fd, callpkt, 2);
+    if (result)
+	*result = (unsigned char)callpkt[1];
+    return ((unsigned char)callpkt[0] == 0x9E);
+}
+int a2quickcall(int fd, int address, int *result)
+{
+    char callpkt[4];
     callpkt[0] = 0x94; // call
     callpkt[1] = address;
     callpkt[2] = address >> 8;

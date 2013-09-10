@@ -1,4 +1,4 @@
-BIN=a2serclk a2pid a2mon a2term dskread dskwrite bintomon bload brun text2merlin merlin2text
+BIN= a2serclk a2pid a2joy a2joymou a2mon a2term dskread dskwrite bintomon bload brun text2merlin merlin2text
 all: $(BIN)
 
 fusea2pi: fusea2pi.c a2lib.c

@@ -186,11 +186,11 @@ int keycode[256] = {
                            KEY_X,           // x      code 78
                            KEY_Y,           // y      code 79
                            KEY_Z,           // z      code 7A
-    MOD_SHIFT | KEY_LEFTBRACE,   // {      code 7B
-    MOD_SHIFT | KEY_BACKSLASH,   // |      code 7C
-    MOD_SHIFT | KEY_RIGHTBRACE,  // }      code 7D
-    MOD_SHIFT | KEY_GRAVE,       // ~      code 7E
-                           KEY_BACKSPACE,   // BS     code 7F                   
+               MOD_SHIFT | KEY_LEFTBRACE,   // {      code 7B
+               MOD_SHIFT | KEY_BACKSLASH,   // |      code 7C
+               MOD_SHIFT | KEY_RIGHTBRACE,  // }      code 7D
+               MOD_SHIFT | KEY_GRAVE,       // ~      code 7E
+                           KEY_BACKSPACE,   // BS     code 7F
     /*
      * w/ closed apple scancodes
      */
@@ -323,6 +323,7 @@ int keycode[256] = {
                MOD_SHIFT | KEY_GRAVE,       // ~      code 7E
                            KEY_DELETE       // DELETE code 7F
 };
+#define KEYCODE_MAX	0x10000
 #define	RUN	0
 #define	STOP	1
 #define	RESET	2
@@ -400,18 +401,18 @@ void sendkey(int fd, int mod, int key)
     }
     else
     {
-	sendkeycodedown(fd, code);
-	if (!(key & KEY_PRESS))
-	    /*
-	     * missed a key down event
-	     * already synthesized one
-	     */
-	    sendkeycodeup(fd, code);
+	if (code != -prevkeycode) /* key may have been released before client call */
+	{
+	    sendkeycodedown(fd, code);
+	    if (!(key & KEY_PRESS))
+		/*
+		 * missed a key down event
+		 * already synthesized one
+		 */
+		sendkeycodeup(fd, code);
+	}
     }
-    prevkeycode = (key & KEY_PRESS) ? code : -1;
-}
-void flushkey(int fd)
-{
+    prevkeycode = (key & KEY_PRESS) ? code : -KEYCODE_MAX;
 }
 void sendbttn(int fd, int mod, int bttn)
 {
@@ -880,21 +881,22 @@ reset:
 			    else
 				state = RESET;
 			    break;
+			case 0x9A: /* acknowledge call with keyboard flush*/
+			    if (prevkeycode >= 0) /* flush keyboard if going away for awhile */
+			    {
+				sendkeycodeup(kbdfd, prevkeycode);
+				prevkeycode = -prevkeycode;
+			    }
 			case 0x94: /* acknowledge call */
 			    if (a2reqlist) /* better have an outstanding request */
 			    {
 				//printf("a2pid: call address 0x%04X\n", a2reqlist->addr);
 				newtio.c_cc[VMIN]  = 1; /* blocking read until 1 char received */
 				tcsetattr(a2fd, TCSANOW, &newtio);
-				if (!writeword(a2fd, a2reqlist->addr, 0x95))
+				if (!writeword(a2fd, a2reqlist->addr, iopkt[0] + 1))
 				    state = RESET;
 				newtio.c_cc[VMIN]  = 3; /* blocking read until 3 chars received */
 				tcsetattr(a2fd, TCSANOW, &newtio);
-				if (prevkeycode >= 0)
-				{
-				    sendkeycodeup(kbdfd, prevkeycode);
-				    prevkeycode = -1;
-				}
 			    }
 			    else
 				state = RESET;
@@ -917,6 +919,7 @@ reset:
 			    for (i = 0; i < MAX_CLIENT; i++)
 				if (a2client[i].flags & CLIENT_COUT)
 				    write(a2client[i].fd, iopkt, 2);
+
 			    break;
 			case 0x9E: /* request complete ok */
 			case 0x9F: /* request complete error */
@@ -1033,10 +1036,11 @@ reset:
 				}
 				break;
 			    case 0x94: /* call */
-				if (read(a2client[i].fd, iopkt, 2) == 2)
+			    case 0x9A: /* call with keyboard flush */
+				if (read(a2client[i].fd, iopkt + 1, 2) == 2)
 				{
-				    addr  = (unsigned char)iopkt[0] | ((unsigned char)iopkt[1] << 8);
-				    addreq(a2fd, i, 0x94, addr, 0, NULL);
+				    addr  = (unsigned char)iopkt[1] | ((unsigned char)iopkt[2] << 8);
+				    addreq(a2fd, i, iopkt[0], addr, 0, NULL);
 				}
 				break;
 			    case 0x96: /* send input char to Apple II */
