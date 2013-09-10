@@ -7,7 +7,8 @@
 #include <pthread.h>
 #include <errno.h>
 #include <sys/time.h>
-
+#define	FALSE	0
+#define	TRUE	(!FALSE)
 /*
  * ProDOS Commands.
  */
@@ -114,6 +115,10 @@ pthread_mutex_t a2pi_busy = PTHREAD_MUTEX_INITIALIZER;
 #define	A2PI_WAIT	pthread_mutex_lock(&a2pi_busy)
 #define	A2PI_RELEASE	pthread_mutex_unlock(&a2pi_busy)
 /*
+ * Raw device write flag.
+ */
+int raw_dev_write = FALSE;
+/*
  * Filename & date/time conversion routines.
  */
 static char hexchar(int h)
@@ -211,12 +216,12 @@ struct stat *unix_stat(struct stat *stbuf, int storage, int access, int blocks, 
     memset(stbuf, 0, sizeof(struct stat));
     if (storage == 0x0F || storage == 0x0D)
     {
-	stbuf->st_mode = (access & 0xC3 == 0xC3) ? S_IFDIR | 0744 : S_IFDIR | 0544;
+	stbuf->st_mode = (access & 0xC3) == 0xC3 ? S_IFDIR | 0744 : S_IFDIR | 0544;
 	stbuf->st_nlink = 2;
     }
     else
     {
-	stbuf->st_mode   = (access & 0xC3 == 0xC3) ? S_IFREG | 0644 : S_IFREG | 0444;
+	stbuf->st_mode   = (access & 0xC3) == 0xC3 ? S_IFREG | 0644 : S_IFREG | 0444;
 	stbuf->st_nlink  = 1;
 	stbuf->st_blocks = blocks;
 	stbuf->st_size   = size;
@@ -766,7 +771,7 @@ static int cache_get_file_info(const char *path, int *access, int *type, int *au
 	    drive    = (path[4] - '1') & 0x01;
 	    *storage = 0x100;
 	    *type    = 0x00;
-	    *access  = 0xC3;
+	    *access  = raw_dev_write ? 0xC3 : 0x01;
 	    *aux     = 0;
 	    *numblks = volblks[slot | (drive << 3)];
 	    *size    = *numblks*512;
@@ -981,7 +986,7 @@ static int a2pi_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		strcpy(filename, "s0d0.po");
 		filename[1] = slot + '0';
 		filename[3] = drive + '1';
-		straw.st_mode   = S_IFREG | 0644;
+		straw.st_mode   = raw_dev_write ? S_IFREG | 0644 : S_IFREG | 0444;
 		straw.st_nlink  = 1;
 		straw.st_blocks = volblks[i];
 		straw.st_size   = straw.st_blocks * 512;
@@ -1191,36 +1196,37 @@ static int a2pi_write(const char *path, const char *buf, size_t size, off_t offs
     cachepath[0] = '\0';
     if (IS_ROOT_DIR(path))
     {
-#if 0	
-	if (IS_RAW_DEV(strlen(path), path))
+	if (raw_dev_write)
 	{
-	    slot     = (path[2] - '0') & 0x07;
-	    drive    = (path[4] - '1') & 0x01;
-	    unit     = (slot << 4) | (drive << 7);
-	    devsize  = volblks[slot | (drive << 3)] * 512;
-	    if (offset > devsize)
-		return 0;
-	    if ((offset + size) > devsize)
-		size = devsize - offset;
-	    if (offset & 0x01FF)
-		return 0; /* force block aligned writes */
-	    if (size & 0x01FF)
-		return 0; /* force block sized writes */
-	    blkcnt = size >> 9;
-	    iblk = offset >> 9;
-	    while (blkcnt--)
+	    if (IS_RAW_DEV(strlen(path), path))
 	    {
-		if ((refnum = prodos_write_block(unit, buf, iblk)) < 0)
-		    return prodos_map_errno(refnum);
-		buf += 512;
-		iblk++;
+		slot     = (path[2] - '0') & 0x07;
+		drive    = (path[4] - '1') & 0x01;
+		unit     = (slot << 4) | (drive << 7);
+		devsize  = volblks[slot | (drive << 3)] * 512;
+		if (offset > devsize)
+		    return 0;
+		if ((offset + size) > devsize)
+		    size = devsize - offset;
+		if (offset & 0x01FF)
+		    return 0; /* force block aligned writes */
+		if (size & 0x01FF)
+		    return 0; /* force block sized writes */
+		blkcnt = size >> 9;
+		iblk = offset >> 9;
+		while (blkcnt--)
+		{
+		    if ((refnum = prodos_write_block(unit, buf, iblk)) < 0)
+			return prodos_map_errno(refnum);
+		    buf += 512;
+		    iblk++;
+		}
+		return size;
 	    }
-	    return size;
+	    return -ENOENT;
 	}
-	return -ENOENT;
-#else
-	return -EACCES;
-#endif
+	else
+	    return -EACCES;
     }
     if ((refnum = prodos_open(prodos_path(path, NULL, NULL, NULL), &io_buff)) > 0)
     {
@@ -1353,6 +1359,11 @@ int main(int argc, char *argv[])
 	volblks[0x06] = 280;
     if (volblks[0x0E] == 0)
 	volblks[0x0E] = 280;
+    if (strcmp(argv[argc - 1], "+rw") == 0)
+    {
+	raw_dev_write = TRUE;
+	argc--;
+    }
     umask(0);
     return fuse_main(argc, argv, &a2pi_oper, NULL);
 }

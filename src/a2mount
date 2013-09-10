@@ -1,2 +1,2 @@
 #!/bin/bash
-/usr/local/bin/fusea2pi $1 $2 -o uid=`id -u` -o gid=`id -g`
+/usr/local/bin/fusea2pi $1 -o uid=`id -u` -o gid=`id -g` $2
