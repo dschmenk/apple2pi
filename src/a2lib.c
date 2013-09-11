@@ -19,7 +19,7 @@ int a2open(char *ipaddr)
     }
     memset(&piaddr, 0, sizeof(piaddr));
     piaddr.sin_family = AF_INET;
-    piaddr.sin_port = htons(6502);
+    piaddr.sin_port = htons(6551);
     res = inet_pton(AF_INET, ipaddr, &piaddr.sin_addr);
     if (res < 0)
     {

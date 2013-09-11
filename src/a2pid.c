@@ -757,7 +757,7 @@ void main(int argc, char **argv)
     prlog("a2pid: Open server socket\n");
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family      = AF_INET;
-    servaddr.sin_port        = htons(6502);
+    servaddr.sin_port        = htons(6551);
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     srvfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (srvfd < 0)
