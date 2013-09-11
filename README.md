@@ -8,7 +8,13 @@ Apple II Pi works by connecting an Apple II to a Raspberry Pi using a RS232 seri
 
 Installing and configuring the Apple II:  You will need an Apple //c or Apple //e w/ SuperSerial Card.  An Apple II Mouse is recommended for that full-on retro feel, but not required.  Download and install the A2PI.PO disk image onto a 5 1/4 floppy.  ADTPro would be the recommended tool for that operation although once you have the latest apple2pi version running, you can use the included dskwrite and dskread utilities for writing and reading ProDOS floppies.
 
-Installing and configuring the Raspberry Pi:  Download the apple2pi project to your Raspberry Pi.  Enter the apple2pi/src directory.  Compile the daemon and tools with 'make' and copy the results to /usr/local/bin with 'sudo make install'.  You will need to disable the Raspbain serial login by editing /etc/inittab and commenting out the line (probably at the very bottom) to look like:<br>
+Installing and configuring the Raspberry Pi:  Download the apple2pi project to your Raspberry Pi.  Enter the apple2pi/src directory.  Compile the daemon and tools with 'make' and copy the results to /usr/local/bin with 'sudo make install'.  To build the FUSE driver needed to mount ProDOS devices under Linux, you will need the libfuse-dev package installed.  Get thris from apt-get, aptitude, or whichever package manager you like.  Build with 'make fusea2pi' and install with 'sudo make fuse-install'.
+
+The following is no longer neessary as the install script carefully makes all the following adjustments automatically.  I left this here so you know what the script is doing.
+
+<comment>
+
+You will need to disable the Raspbain serial login by editing /etc/inittab and commenting out the line (probably at the very bottom) to look like:<br>
 <code>
 \#T0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100
 </code>
@@ -38,6 +44,8 @@ right before the line:
 <code>
 exit 0
 </code>
+
+</comment>
 
 followed by rebooting the Raspberry Pi.
 
