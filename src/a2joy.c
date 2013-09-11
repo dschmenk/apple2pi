@@ -8,7 +8,7 @@
 #include <signal.h>
 #define	FALSE		0
 #define	TRUE		(!FALSE)
-#define	POLL_HZ		20	/* must be greater than 1 */
+#define	POLL_HZ		30	/* must be greater than 1 */
 struct timespec tv;
 struct input_event evkey, evabsx, evabsy, evsync;
 #define	BTTN_IO		0xC061
