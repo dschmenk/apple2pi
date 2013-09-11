@@ -15,6 +15,8 @@ This documents the utilities included in the Apple II Pi project.  See the proje
 	-----------------
 	bload		- Load binary file
 	brun		- Run binary file
+	merlin2text	- Convert MERLIN text files to unix text files
+	text2merlin	- Convert unix text files to MERLIN text files
 	a2lib.c		- Simple a2pid connection library
 	
 	Disk image tools
@@ -89,7 +91,19 @@ Like bload, brun will load the binary file but will also jump to the loading add
 
 brun <filename> <address> [IP addr]
 
-4.3 a2lib.c:
+4.3 merlin2text:
+----------------
+If you develop on the Apple II, most likely you have had experience with the MERLIN assembler.  Great assembler for small projects, but it uses a high ASCII format and spaces instead of tabs.  This quick utility quickly reformats the MERLIN text into a unix palatable text file for your favorite editor.  Ran as:
+
+merlin2text < <prodosfile> > <unixfile>
+
+4.4 text2merlin:
+----------------
+REverses the process above to put the text file back on to ProDOS media.
+
+text2merlin < <unixfile> > <prodosfile>
+
+4.5 a2lib.c:
 ------------
 All the tools include a2lib.c as a very poor, cheesy, horrible, etc. way to implement the Apple II Pi daemon API.  Only useful if you are looking to write your own tool or modify the code of the existing tools.
 
