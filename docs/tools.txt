@@ -37,7 +37,7 @@ This documents the utilities included in the Apple II Pi project.  See the proje
 	
 	a2serclk	- Raspberry Pi GPCLK for Apple II Pi hardware
         a2pid           - Apple II Pi Linux daemon
-        A2Pi.PO
+        A2PI.PO
 
 3.0 Interactive Tools:
 ======================
