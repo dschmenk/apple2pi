@@ -99,7 +99,7 @@ merlin2text < <prodosfile> > <unixfile>
 
 4.4 text2merlin:
 ----------------
-REverses the process above to put the text file back on to ProDOS media.
+Reverses the process above to put the text file back on to ProDOS media.
 
 text2merlin < <unixfile> > <prodosfile>
 
@@ -119,7 +119,7 @@ dskread [IP addr]
 
 5.2 dskwrite:
 -------------
-Simple, jst like dskread.  dskwrite is run as:
+Simple, just like dskread.  dskwrite is run as:
 
 dskwrite <filename> [IP addr]
 
