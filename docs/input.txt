@@ -13,18 +13,27 @@ This documents the input devices supported by the Apple II Pi project.  See the 
 =============
 The keyboard is probably the input device used most with Apple II Pi.  Now, Apple IIe and //c keyboards changed over the course of their lifetimes.  Some were definitely better than others.  If you are lucky enough to have the "clicky" //c keyboard, you will find it to be  great input device for Linux.  I also like some of the later IIe keyboards that aren't as "clicky" as the //c, but have a firm, positive, and smooth action.  And the control key is in the proper place.
 
-There are many keys unavailable on the Apple II keyboard that are useful in a modern computer.  To fill in the gaps, the OpenApple and SolidApple keys are employed.  The OpenApple key is mapped to the Left-Alt key and used to modify all other keys, just like you would excpect.  The SolidApple key works as a funcion key to remap other keys.  The current FN-x mappings turn the arrow keys into Home, End, Page-Up, and Page-Down.  The number keys along the top row become F-1 through F-10.  The DELETE key is BackSpace unless modified with Solid Apple to be a real Delete.
+There are many keys unavailable on the Apple II keyboard that are useful in a modern computer.  To fill in the gaps, the OpenApple and SolidApple keys are employed.  The OpenApple key is mapped to the Left-Alt key and used to modify all other keys, just like you would excpect.  The SolidApple key works as a funcion key to remap other keys.  The current Fn-x mappings turn the arrow keys into Home, End, Page-Up, and Page-Down.  The number keys along the top row become F-1 through F-10.  The Delete key is BackSpace unless modified with Solid Apple to be a real Delete.
 
-Three special key sequences affect the operaton of the Apple II client/server connection.  SolidApple-ESCAPE will exit out of the client, returning control to the Apple II and leaving it disconnected from Linux.  The Linux Apple II Pi daemon process is still running.  The connection can be re-established by either running the STARTUP program, typing 'PR# a$9600', or pressing Ctrl-RESET.
+Three special key sequences affect the operaton of the Apple II client/server connection.  SolidApple-Escape will exit out of the client, returning control to the Apple II and leaving it disconnected from Linux.  The Linux Apple II Pi daemon process is still running.  The connection can be re-established by either running the STARTUP program, typing 'PR# a$9600', or pressing Ctrl-Reset.
 
-Ctrl-RESET key sequence will re-establish the client/server connection and jump to the BASIC cold-start routine, assuming the client code hasn't been damaged.
+Ctrl-Reset key sequence will re-establish the client/server connection and jump to the BASIC cold-start routine, assuming the client code hasn't been damaged.
 
-Finally, OpenApple-SoldApple-ESCAPE will exit both the client and server programs.  The client Apple II code can be restarted as above.  The server daemon will have to be started from another computer logged in to the Raspberry Pi, or a USB keyboard connected to the Pi.  Type 'sudo a2pid --daemon' to restart the server process.
+OpenApple-SolidApple-Escape will exit both the client and server programs.  The client Apple II code can be restarted as above.  The server daemon will have to be started from another computer logged in to the Raspberry Pi, or a USB keyboard connected to the Pi.  Type 'sudo a2pid --daemon' to restart the server process.
+
+Finally, there is not a requirement to use the Apple II keyboard.  Simply plug any compatible USB keyboard into the Raspberry Pi.
 
 4.0 Mouse:
 ==========
-The Apple II mouse, if connected, will show up as a standard Linux mouse.  The Open Apple key can modify the single mouse button to return MIDDLE_BTTN, and the Solid Apple key can modify the mouse button to return RIGHT_BTTN.  If you don't have, or want to use, an Apple II mouse, any compatible USB mouse can be plugged into the Raspberry Pi.  The mouse won't be available to the Apple II, but emulators will see it.
+The Apple II mouse, if connected, will show up as a standard Linux mouse.  The OpenApple key can modify the single mouse button to return MIDDLE_BTTN, and the SolidApple key can modify the mouse button to return RIGHT_BTTN.  If you don't have, or want to use, an Apple II mouse, any compatible USB mouse can be plugged into the Raspberry Pi.  The mouse won't be available to the Apple II, but emulators will see it.
 
 5.0 Joystick:
 =============
-Any Apple II gameport device can show up ad a Linux joystick with the a2joy driver.  There is an additional X server rule to make sure joysticks don't get used as mouse control. It is automatically installed in /etc/rc.local but can be changed or removed.
+Any Apple II gameport device can show up ad a Linux joystick with the a2joy driver.  There is an additional X server rule to make sure joysticks don't get used as mouse control. It is automatically installed in /etc/rc.local but can be changed or removed.  You can use the joystick to control the mouse with the a2joymou driver.  If another Apple II Pi joystick driver is running, it should be stopped with 'sudo killall a2joy' first.  The default mouse button is connected to button 0.  However, because the joystick buttons share the same circuitry as the OpenApple and ClosedApple keys, the sequence to get the RIGHT_BTTN mouse click, you must first depress button 1, then depress button 0 (button 1 modifies button 0).  This removes the confusion of using the keyboard Fn-x keys popping up right-click menus.  The remaining driver, a2joypad, is a poorly tested driver for Koala Pad type devices.  It will attempt to make a trackpad out of it.  My Koala Pad like device is not working well, so YMMV.
+
+Conclusion:
+===========
+Input using Apple II peripherals is really what gives Apple II Pi its retro appeal.  The ability to use the Apple II keyboard, mouse, and joystick is what sets Apple II Pi apart.
+
+Enjoy,
+	Dave Schmenk

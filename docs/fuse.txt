@@ -45,7 +45,7 @@ At startup, fusea2pi calls the ProDOS on_line funtion to retrieve all the ProDOS
 
 ProDOS filenames are munged in the same way that CiderPress attaches the meta information, type and aux, to the end of the filename, separated by '#'.  Also, filenames are displayed in upper-case.  The decision to munge the filenames in this was it in order to make a very visual distincion between the ProDOS files and regular *nix files.
 
-The driver can run directly, but the helper script a2mount is the recommended way to mount ProDOS volumes.  Runa as:
+The driver can run directly, but the helper script a2mount is the recommended way to mount ProDOS volumes.  Run as:
 
 fusea2pi <mount point> [fuse options..] [+rw]
 
