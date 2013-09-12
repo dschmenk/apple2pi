@@ -1,0 +1,71 @@
+1.0 Introduction:
+================
+This documents the FUSE driver included in the Apple II Pi project.  See the project README.md for installation instructions.
+
+2.0 Contents:
+=============
+
+	Build and Installation
+	----------------------
+	Required Packages
+	make fusea2pi	- Build the binary
+	fuse-install	- Install tools, set group permissions
+	
+	Commands
+	--------
+	fusea2pi	- FUSE driver for ProDOS devices under Apple II Pi
+	a2mount		- mount script taking care of uid & gid
+	fusermount	- unmount FUSE mountpoints
+	
+3.0 Build and Installation:
+===========================
+Building the FUSE driver is broken out as a separate step because it has other requirements than the core Apple II Pi package.  fusea2pi is the driver binary that mounts ProDOS devices attached to Apple II Pi.  It does NOT mount image files or the like.
+
+3.1 Required Packages:
+----------------------
+To build the FUSE driver, the libfuse-dev deb package has to be installed first.  Use apt-get, aptitude, or your favorite package tool to download and install.
+
+3.2 make fusea2pi:
+------------------
+Type 'make fusea2pi' in the apple2pi/src directory to build the driver.  If the libfuse-dev package is installed, the binary should be built without error or warning.
+
+3.3 fuse-install:
+-----------------
+Installation is a two step process.  First, type 'sudo make fuse-install' to place the binary and script in /usr/local/bin.  Next, add your user to the "fuse" group with 'sudo addgroup <username> fuse' (replace <username> with your actual user name).
+
+4.0 Commands:
+=============
+The FUSE driver can be run directly, but the a2mount script removes some of the tedium.
+
+4.1 fusea2pi:
+-------------
+The FUSE driver for Apple II Pi works closely with the Apple II environment to relect the FUSE function call into a ProDOS MLI call.  fusea2pi knows very little about the details of ProDOS.  PRoDOS itself does most of the work so that compatibility is guaranteed.
+
+At startup, fusea2pi calls the ProDOS on_line funtion to retrieve all the ProDOS volumes available to the Apple II.  fusea2pi then makes a directory for each volume named after the volume.  In addition, each volume is made available as a raw device file named after it's position in the ProDOS device table.  The two default 5 1/4 drives in slot 6 are always made available for non-ProDOS format floppies that can still be accessed in a raw mode.  This way, volumes can be easily backed up (copied elsewhere) and emulators can have access to the physical media.
+
+ProDOS filenames are munged in the same way that CiderPress attaches the meta information, type and aux, to the end of the filename, separated by '#'.  Also, filenames are displayed in upper-case.  The decision to munge the filenames in this was it in order to make a very visual distincion between the ProDOS files and regular *nix files.
+
+The driver can run directly, but the helper script a2mount is the recommended way to mount ProDOS volumes.  Runa as:
+
+fusea2pi <mount point> [fuse options..] [+rw]
+
+The last option (must be last) is a fusea2pi only option which allows the raw device files to be writeable.  By default, they are read-only.  It can be potentially dangerous to write to the raw device while Linux accesses the mounted filesystem.  If an emulator is going to be writing to the raw device files, it is best to leave the mounted filesystem alone until the emulator is exited.
+
+4.2 a2mount:
+------------
+The a2mount script calls the fusea2pi and fills in some additional parameters to give your username the ownership of the files.  This is the preferred way to call fusea2pi.  It can accept up to two parameters: one is the mount point, the second is the option +rw argument to make the raw device files writeable.  Run as:
+
+a2mount <mount point> [+rw]
+
+4.3 fusermount:
+---------------
+To unmount the ProDOS filesystem, call the FUSE command as:
+
+fusermount -u <mount point>
+
+5.0 Conclusion:
+===============
+The FUSE driver for Apple II Pi is a remarkably effective way to access the files on Apple II media.  Care must be taken when using the +rw option.
+
+Enjoy,
+	Dave Schmenk
