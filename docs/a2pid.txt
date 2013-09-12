@@ -4,7 +4,7 @@ Apple II Pi is a combination of Apple II code, Linux code, and a serial port con
 
 2.0 a2pid:
 ==========
-On the Linux side, the Apple II Pi daemon runs in the background, listening to the Apple II on a serial port connection, listening on TCP/IP port 6502 for Linux client connections, and managing the insertion of Apple II keyboard and mouse events into the Linux input subsytem.  It's not something normally visisble, but is the traffic cop between the Apple II, Linux input events, and Linux client programs that interact with the Apple II.
+On the Linux side, the Apple II Pi daemon runs in the background, listening to the Apple II on a serial port connection, listening on TCP/IP port 6551 for Linux client connections, and managing the insertion of Apple II keyboard and mouse events into the Linux input subsytem.  It's not something normally visisble, but is the traffic cop between the Apple II, Linux input events, and Linux client programs that interact with the Apple II.
 
 2.1 Keyboard Mapping:
 =====================
