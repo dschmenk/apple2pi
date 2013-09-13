@@ -141,17 +141,24 @@ void main(int argc, char **argv)
     while (!stop)
     {
 	if (gptoggle)
+	{
 	    a2quickcall(pifd, READGP0, &absx);
+	    if (evabsx.value != absx || evabsy.value != absy)
+	    {
+		evabsx.value = absx;
+		evabsy.value = absy;
+		write(joyfd, &evabsx, sizeof(evabsx));
+		write(joyfd, &evabsy, sizeof(evabsy));
+		write(joyfd, &evsync, sizeof(evsync));
+	    }
+	}
 	else
+	{
 	    a2quickcall(pifd, READGP1, &absy);
-	a2read(pifd, BTTN_IO, 2, bttns);
+	}
 	gptoggle ^= 1;
+	a2read(pifd, BTTN_IO, 2, bttns);
 	if (isdebug) fprintf(stderr, "a2joy (%d, %d) [%d %d]\n", absx, absy, bttns[0] >> 7, bttns[1] >> 7);
-	evabsx.value = absx;
-	evabsy.value = absy;
-	write(joyfd, &evabsx, sizeof(evabsx));
-	write(joyfd, &evabsy, sizeof(evabsy));
-	write(joyfd, &evsync, sizeof(evsync));
 	if ((bttns[0] & 0x80) != prevbttns[0])
 	{
 	    prevbttns[0] = bttns[0] & 0x80;
