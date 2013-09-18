@@ -192,7 +192,7 @@ int keycode[256] = {
                MOD_SHIFT | KEY_GRAVE,       // ~      code 7E
                            KEY_BACKSPACE,   // BS     code 7F
     /*
-     * w/ closed apple scancodes
+     * w/ solid apple scancodes
      */
     MOD_CTRL | MOD_SHIFT | KEY_2,           // CTRL-@ code 00
     MOD_CTRL |             KEY_A,           // CTRL-A code 01
@@ -221,25 +221,25 @@ int keycode[256] = {
     MOD_CTRL |             KEY_X,           // CTRL-X code 18
     MOD_CTRL |             KEY_Y,           // CTRL-Y code 19
     MOD_CTRL |             KEY_Z,           // CTRL-Z code 1A
-                           KEY_ESC,         // ESCAPE code 1B
+    MOD_CTRL |             KEY_ESC,         // ESCAPE code 1B
     MOD_CTRL |             KEY_BACKSLASH,   // CTRL-\ code 1C
     MOD_CTRL |             KEY_RIGHTBRACE,  // CTRL-] code 1D
     MOD_CTRL |             KEY_6,           // CTRL-6 code 1E
     MOD_CTRL |             KEY_MINUS,       // CTRL-- code 1F
                            KEY_SPACE,       // ' '    code 20
-                           KEY_F11,         // !      code 21
+               MOD_SHIFT | KEY_F1,          // !      code 21
                MOD_SHIFT | KEY_APOSTROPHE,  // "      code 22
-                           KEY_F13,         // #      code 23
-                           KEY_F14,         // $      code 24
-                           KEY_F15,         // %      code 25
-                           KEY_F17,         // &      code 26
+               MOD_SHIFT | KEY_F3,          // #      code 23
+               MOD_SHIFT | KEY_F4,          // $      code 24
+               MOD_SHIFT | KEY_F5,          // %      code 25
+               MOD_SHIFT | KEY_F7,          // &      code 26
                            KEY_APOSTROPHE,  // '      code 27
-                           KEY_F19,         // (      code 28
-                           KEY_F20,         // )      code 29
-                           KEY_F18,         // *      code 2A
-               MOD_SHIFT | KEY_EQUAL,       // +      code 2B
+               MOD_SHIFT | KEY_F9,          // (      code 28
+               MOD_SHIFT | KEY_F10,         // )      code 29
+               MOD_SHIFT | KEY_F8,          // *      code 2A
+               MOD_SHIFT | KEY_F12,         // +      code 2B
                            KEY_COMMA,       // ,      code 2C
-                           KEY_MINUS,       // -      code 2D
+                           KEY_F11,         // -      code 2D
                            KEY_DOT,         // .      code 2E
                            KEY_SLASH,       // /      code 2F
                            KEY_F10,         // 0      code 30
@@ -255,10 +255,10 @@ int keycode[256] = {
                MOD_SHIFT | KEY_SEMICOLON,   // :      code 3A
                            KEY_SEMICOLON,   // ;      code 3B
                MOD_SHIFT | KEY_COMMA,       // <      code 3C
-                           KEY_EQUAL,       // =      code 3D
+                           KEY_F12,         // =      code 3D
                MOD_SHIFT | KEY_DOT,         // >      code 3E
                MOD_SHIFT | KEY_SLASH,       // ?      code 3F
-                           KEY_F12,         // @      code 40
+               MOD_SHIFT | KEY_F2,          // @      code 40
                MOD_SHIFT | KEY_A,           // A      code 41
                MOD_SHIFT | KEY_B,           // B      code 42
                MOD_SHIFT | KEY_C,           // C      code 43
@@ -288,8 +288,8 @@ int keycode[256] = {
                            KEY_LEFTBRACE,   // [      code 5B
                            KEY_BACKSLASH,   // \      code 5C
                            KEY_RIGHTBRACE,  // ]      code 5D
-                           KEY_F16,         // ^      code 5E
-               MOD_SHIFT | KEY_MINUS,       // _      code 5F
+               MOD_SHIFT | KEY_F6,          // ^      code 5E
+               MOD_SHIFT | KEY_F11,         // _      code 5F
                            KEY_GRAVE,       // `      code 60
                            KEY_A,           // a      code 61
                            KEY_B,           // b      code 62
@@ -816,8 +816,8 @@ reset:
 			case 0x82: /* keyboard event */
 			    // printf("Keyboard Event: 0x%02X:%c\n", iopkt[1], iopkt[2] & 0x7F);
 			    sendkey(kbdfd, iopkt[1], iopkt[2]);
-			    if (iopkt[2] == 0x9B && iopkt[1] == 0xC0)
-				state = STOP;
+			    //if (iopkt[2] == 0x9B && iopkt[1] == 0xC0)
+				//state = STOP;
 			    break;
 			case 0x84: /* mouse move event */
 			    // printf("Mouse XY Event: %d,%d\n", (signed char)iopkt[1], (signed char)iopkt[2]);
