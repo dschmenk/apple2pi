@@ -1,5 +1,4 @@
 #!/bin/bash
-
 #
 # Update /boot partition files.
 #
@@ -29,3 +28,9 @@ fi
 # Disable joystick as a mouse in X
 #
 cp 11-joy.conf /usr/share/X11/xorg.conf.d
+#
+# Make sure a2mount is executable
+#
+if [ -f /usr/local/bin/a2mount ] ; then
+	chmod +x /usr/local/bin/a2mount
+fi
