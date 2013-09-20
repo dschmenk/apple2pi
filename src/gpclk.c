@@ -67,7 +67,7 @@ void release_io(volatile unsigned int *io_map)
     munmap((void *)io_map, IOMAP_LEN);
 }
 
-void setserclk(void)
+void gpclk(int idiv)
 {
     // I/O access
     volatile unsigned *gpio, *cmgp;
@@ -77,7 +77,7 @@ void setserclk(void)
     cmgp = setup_io(ARM_PERI_BASE + CMGP_OFFSET);
     gpio = setup_io(ARM_PERI_BASE + GPIO_OFFSET);
 
-    // Set Clock Manager to provivede ~1.8432 MHz from 500 MHz source (PLLD)
+    // Set Clock Manager to 500 MHz source (PLLD)
     CMGP_REG(CM_GP0CTL) = (0x5A << 24) // Password
 	                               // Disable
 	                | (1);         // Src = oscillator
@@ -86,7 +86,7 @@ void setserclk(void)
 	                               // Disable
 	                | (6);         // Src = PLLD
     CMGP_REG(CM_GP0DIV) = (0x5A << 24) // Password
-                        | (271 << 12); // IDIV
+                        | ((idiv) << 12); // IDIV
     usleep(1000);
     CMGP_REG(CM_GP0CTL) = (0x5A << 24) // Password
 	                | (1 << 4)     // Enable

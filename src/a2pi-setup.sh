@@ -15,12 +15,12 @@ if [ -n "$gettyline" -a ${gettyline:0:1} = T ] ; then
 	sed 's/^T0*/#T0*/' /etc/inittab.bak > /etc/inittab
 fi
 #
-# Add a2serclk and a2pid to rc.local
+# Add a2joy and a2pid to rc.local
 #
 if [ -f /etc/rc.local ] ; then
 	if ! grep a2pid /etc/rc.local > /dev/null ; then
 		mv /etc/rc.local /etc/rc.local.bak
-		sed -e '/^exit/i\# Start Apple II Pi' -e '/^exit/i\/usr/local/bin/a2serclk' -e '/^exit/i\/usr/local/bin/a2pid --daemon' -e '/^exit/i\wait 1' -e '/^exit/i\/usr/local/bin/a2joy' /etc/rc.local.bak > /etc/rc.local
+		sed -e '/^exit/i\# Start Apple II Pi' -e '/^exit/i\/usr/local/bin/a2pid --daemon' -e '/^exit/i\wait 1' -e '/^exit/i\/usr/local/bin/a2joy' /etc/rc.local.bak > /etc/rc.local
 		chmod +x /etc/rc.local
 	fi
 fi

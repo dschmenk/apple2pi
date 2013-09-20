@@ -7,12 +7,17 @@
 #include <unistd.h>
 #include <termios.h>
 #include <string.h>
+#include <signal.h>
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <linux/input.h>
 #include <linux/uinput.h>
+
+#ifdef SETSERCLK
+#include "gpclk.c"
+#endif
 
 #define BAUDRATE B115200
 #define _POSIX_SOURCE 1 /* POSIX compliant source */
@@ -586,6 +591,13 @@ void flushreqs(int a2fd, int clidx, int status, int result)
 	}
     }
 }
+static void sig_bye(int signo)
+{
+    /*
+     * Exit gracefully
+     */
+    state = STOP;
+}
 void main(int argc, char **argv)
 {
     struct uinput_user_dev uidev;
@@ -622,6 +634,13 @@ void main(int argc, char **argv)
 	     */
 	    devtty = argv[1];
     }
+    /*
+     * Add signal handlers.
+     */
+    if (signal(SIGINT, sig_bye) == SIG_ERR)
+	die("signal");
+    if (signal(SIGHUP, sig_bye) == SIG_ERR)
+	die("signal");
     /*
      * Create keyboard input device
      */
@@ -709,6 +728,12 @@ void main(int argc, char **argv)
     evrely.type = EV_REL;
     evrely.code = REL_Y;
     evsync.type = EV_SYN;
+#ifdef SETSERCLK
+    /*
+     * Initialize ACIA clock for Apple II Pi card
+     */
+    gpclk(271); /* divisor for ~1.8 MHz => (500/271) MHz */
+#endif
     /*
      * Open serial port.
      */
