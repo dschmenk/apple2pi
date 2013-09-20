@@ -19,7 +19,7 @@ Three special key sequences affect the operaton of the Apple II client/server co
 
 Ctrl-Reset key sequence will re-establish the client/server connection and jump to the BASIC cold-start routine, assuming the client code hasn't been damaged.
 
-OpenApple-SolidApple-Escape will exit both the client and server programs.  The client Apple II code can be restarted as above.  The server daemon will have to be started from another computer logged in to the Raspberry Pi, or a USB keyboard connected to the Pi.  Type 'sudo a2pid --daemon' to restart the server process.
+OpenApple-SolidApple-Delete will exit the client program.  The client Apple II code can be restarted as above.  The server daemon will have to be killed and started from another computer logged in to the Raspberry Pi, or a USB keyboard connected to the Pi.  Type 'sudo a2pid --daemon' to restart the server process.
 
 Finally, there is not a requirement to use the Apple II keyboard.  Simply plug any compatible USB keyboard into the Raspberry Pi.
 
