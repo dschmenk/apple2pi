@@ -1,0 +1,5 @@
+a2pi (0.9.0-1) unstable; urgency=low
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- David Schmenk <dschmenk@apple2pie>  Thu, 19 Sep 2013 18:28:32 -0700
