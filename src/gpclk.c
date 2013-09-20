@@ -31,10 +31,11 @@
 #define CM_GP0CTL (0x7E101070)
 #define CM_GP0DIV (0x7E101074)
 
+#define IOMAP_LEN	4096
 //
 // Set up a memory regions to access GPIO
 //
-volatile unsigned int *setup_io(reg_base)
+volatile unsigned int *setup_io(int reg_base)
 {
     int  mem_fd;
     void *io_map;
@@ -47,7 +48,7 @@ volatile unsigned int *setup_io(reg_base)
     }
     // mmap IO
     io_map = mmap(NULL,             //Any adddress in our space will do
-		  4096,             //Map length
+		  IOMAP_LEN,       //Map length
 		  PROT_READ|PROT_WRITE,// Enable reading & writting to mapped memory
 		  MAP_SHARED,       //Shared with other processes
 		  mem_fd,           //File to map
@@ -59,13 +60,17 @@ volatile unsigned int *setup_io(reg_base)
 	exit(-1);
     }
     return (volatile unsigned *)io_map;
- }
+}
 
-// I/O access
-volatile unsigned *gpio, *cmgp;
-
-int main(int argc, char **argv)
+void release_io(volatile unsigned int *io_map)
 {
+    munmap((void *)io_map, IOMAP_LEN);
+}
+
+void setserclk(void)
+{
+    // I/O access
+    volatile unsigned *gpio, *cmgp;
     int g,rep;
 
     // Set up gpi pointer for direct register access
@@ -90,7 +95,8 @@ int main(int argc, char **argv)
     // Set GCLK function (ALT0) for GPIO 4 (header pin #7)
     INP_GPIO(4);
     SET_GPIO_ALT(4, 0x00);
-
-    return 0;
+    // Release I/O space
+    release_io(gpio);
+    release_io(cmgp);
 }
 
