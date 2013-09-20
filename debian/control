@@ -2,19 +2,20 @@ Source: a2pi
 Section: unknown
 Priority: extra
 Maintainer: David Schmenk <dschmenk@apple2pie>
-Build-Depends: debhelper (>= 8.0.0)
+Build-Depends: debhelper (>= 8.0.0), libfuse-dev (>= 2.9.0)
 Standards-Version: 3.9.3
-Homepage: <insert the upstream URL, if relevant>
+Homepage: http://schmenk.is-a-geek.com
 #Vcs-Git: git://git.debian.org/collab-maint/a2pi.git
 #Vcs-Browser: http://git.debian.org/?p=collab-maint/a2pi.git;a=summary
 
 Package: a2pi
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: <insert up to 60 chars description>
- <insert long description, indented with spaces>
+Depends: ${shlibs:Depends}, ${misc:Depends}, libfuse2 (>= 2.9.0)
+Description: Apple II Pi daemon and utilites
+ Apple II Pi is a suite of programs to integrate an Apple II with
+ the Raspberry Pi.
 
 Package: a2pi-doc
 Architecture: all
 Description: documentation for a2pi
- <insert long description, indented with spaces>
+ Apple II Pi documentaton and sample code.

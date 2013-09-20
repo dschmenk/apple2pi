@@ -1,5 +1,6 @@
-DESTDIR=/usr/local/bin
-SHAREDIR=/usr/share/a2pi
+DESTDIR=/usr/local
+BINDIR=$(DESTDIR)/bin
+SHAREDIR=$(DESTDIR)/share/a2pi
 BIN=a2pid a2joy a2joymou a2joypad a2mon a2term fusea2pi dskread dskwrite bload brun
 A2PIDEFS=-DSETSERCLK
 
@@ -15,10 +16,10 @@ clean:
 	-rm $(BIN) *~ *.tar.gz
 
 install:
-	cp $(BIN) a2mount $(DESTDIR)
+	cp $(BIN) a2mount $(BINDIR)
 	-mkdir $(SHAREDIR)
 	cp ../share/* $(SHAREDIR)
 	$(BASH) ./a2pi-setup.sh
 
 uninstall:
-	cd $(DESTDIR); rm $(BIN) a2mount
+	cd $(BINDIR); rm $(BIN) a2mount

@@ -6,11 +6,19 @@ DISTDIR=./$(DIST)
 a2pi:
 	$(MAKE) -C src
 
+clean:
+	-rm *.tar.gz
+	$(MAKE) -C src clean
+
+install:
+	$(MAKE) -C src install
+
 dist:
 	-rm -rf $(DISTDIR)
 	mkdir $(DISTDIR)
 	-chmod 777 $(DISTDIR)
 	-cp * $(DISTDIR)
+	cp -R ./debian $(DISTDIR)
 	cp -R ./docs $(DISTDIR)
 	cp -R ./share $(DISTDIR)
 	cp -R ./src $(DISTDIR)
