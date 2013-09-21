@@ -16,10 +16,10 @@ clean:
 	-rm $(BIN) *~ *.tar.gz
 
 install:
+	-mkdir -p $(BINDIR)
 	cp $(BIN) a2mount $(BINDIR)
-	-mkdir $(SHAREDIR)
+	-mkdir -p $(SHAREDIR)
 	cp ../share/* $(SHAREDIR)
-	$(BASH) ./a2pi-setup.sh
 
 uninstall:
 	cd $(BINDIR); rm $(BIN) a2mount
