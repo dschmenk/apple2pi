@@ -14,10 +14,3 @@ Depends: ${misc:Depends}, libfuse2 (>= 2.9.0)
 Description: Apple II Pi daemon and utilities
  Apple II Pi is a suite of programs to integrate an Apple II with
  the Raspberry Pi.
-
-Package: a2pi-doc
-Section: doc
-Architecture: all
-Description: documentation and sample code for Apple II Pi
- Apple II Pi is a suite of programs to integrate an Apple II with
- the Raspberry Pi.

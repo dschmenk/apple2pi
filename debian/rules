@@ -19,6 +19,3 @@ export DH_OPTIONS
 
 %:
 	dh $@ 
-
-override_dh_auto_install:
-	$(MAKE) DESTDIR=$$(pwd)/debian/a2pi install
