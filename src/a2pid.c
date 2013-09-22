@@ -15,7 +15,7 @@
 #include <linux/input.h>
 #include <linux/uinput.h>
 
-#ifdef SETSERCLK
+#if defined(SETSERCLK) && defined(__ARMEL__)
 #include "gpclk.c"
 #endif
 
@@ -730,7 +730,7 @@ void main(int argc, char **argv)
     evrely.type = EV_REL;
     evrely.code = REL_Y;
     evsync.type = EV_SYN;
-#ifdef SETSERCLK
+#if defined(SETSERCLK) && defined(__ARMEL__)
     /*
      * Initialize ACIA clock for Apple II Pi card
      */
