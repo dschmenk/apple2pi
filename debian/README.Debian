@@ -1,6 +1,7 @@
 a2pi for Debian
 ---------------
 
-<possible notes regarding this package - if none, delete this file>
+Make sure you add your username to groups "fuse" and "input"
+for easier installation.
 
- -- David Schmenk <dschmenk@apple2pie>  Thu, 19 Sep 2013 18:28:32 -0700
+ -- David Schmenk <dschmenk@gmail.com>  Thu, 19 Sep 2013 18:28:32 -0700

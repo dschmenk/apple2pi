@@ -20,17 +20,25 @@ fi
 if [ -f /etc/rc.local ] ; then
 	if ! grep a2pid /etc/rc.local > /dev/null ; then
 		mv /etc/rc.local /etc/rc.local.bak
-		sed -e '/^exit/i\# Start Apple II Pi' -e '/^exit/i\/usr/local/bin/a2pid --daemon' -e '/^exit/i\wait 1' -e '/^exit/i\/usr/local/bin/a2joy' /etc/rc.local.bak > /etc/rc.local
+		sed -e '/^exit/i\# Start Apple II Pi' -e '/^exit/i\/usr/local/sbin/a2pid --daemon' -e '/^exit/i\wait 1' -e '/^exit/i\/usr/local/bin/a2joy' /etc/rc.local.bak > /etc/rc.local
 		chmod +x /etc/rc.local
 	fi
 fi
 #
 # Disable joystick as a mouse in X
 #
-cp 11-joy.conf /usr/share/X11/xorg.conf.d
+if [ -d /usr/share/X11/xorg.conf.d ] ; then
+	cp 11-joy.conf /usr/share/X11/xorg.conf.d
+fi
 #
 # Make sure a2mount is executable
 #
 if [ -f /usr/local/bin/a2mount ] ; then
 	chmod +x /usr/local/bin/a2mount
+fi
+#
+# Remove old a2pid
+#
+if [ -f /usr/local/bin/apid ] ; then
+	rm /usr/local/bin/a2pid
 fi

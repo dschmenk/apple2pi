@@ -31,6 +31,7 @@ case "$1" in
 	rm /usr/local/bin/a2mount
 	rm /usr/local/bin/bload
 	rm /usr/local/bin/brun
+	rm /usr/local/sbin/a2pid
     ;;
 
     failed-upgrade)

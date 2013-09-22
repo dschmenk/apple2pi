@@ -7,6 +7,9 @@ a2pi:
 	$(MAKE) -C src
 
 clean:
+	-rm $(PACKAGE)_*
+	-rm *.deb
+	-rm -rf $(DISTDIR)
 	-rm *.tar.gz
 	$(MAKE) -C src clean
 
@@ -14,7 +17,7 @@ install:
 	$(MAKE) -C src install
 
 dist:
-	-rm -rf $(DISTDIR)
+	$(MAKE) clean
 	mkdir $(DISTDIR)
 	-chmod 777 $(DISTDIR)
 	cp LICENSE.txt $(DISTDIR)
@@ -26,4 +29,9 @@ dist:
 	cp -R ./src $(DISTDIR)
 	-chmod -R a+r $(DISTDIR)
 	tar czf $(DIST).tar.gz $(DISTDIR)
-	rm -rf $(DISTDIR)
+
+deb:
+	$(MAKE) dist
+	mv $(DIST).tar.gz $(PACKAGE)_$(VERSION).orig.tar.gz
+	cd $(DIST); debuild -us -uc
+	rm $(PACKAGE)_$(VERSION).orig.tar.gz

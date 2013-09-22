@@ -20,6 +20,32 @@ set -e
 
 case "$1" in
     configure)
+        #
+        # Update /boot partition files.
+        #
+        ttyline=`grep ttyAMA0 /boot/cmdline.txt`
+        if [ "$ttyline" != "" ] ; then
+	    mv /boot/cmdline.txt /boot/cmdline.bak
+	    echo "dwc_otg.lpm_enable=0 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline rootwait" > /boot/cmdline.txt
+        fi
+        #
+        # Disable getty on built-in serial port.
+        #
+        ttyline=`grep ttyAMA0 /etc/inittab`
+	case "$gettyline" in
+	T*)
+	    mv /etc/inittab /etc/inittab.bak
+	    sed 's/^T0*/#T0*/' /etc/inittab.bak > /etc/inittab
+            ;;
+	*)
+	    ;;
+	esac
+        #
+        # Disable joystick as a mouse in X
+        #
+        if [ -d /usr/share/X11/xorg.conf.d ] ; then
+            cp /usr/share/a2pi/11-joy.conf /usr/share/X11/xorg.conf.d
+        fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
