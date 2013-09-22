@@ -1,5 +1,17 @@
-a2pi (0.9.0-1) unstable; urgency=low
+a2pi (0.1.0-3) unstable; urgency=low
 
-  * Initial release (Closes: #0901)
+  * Fix for daemon start
+
+ -- David Schmenk <dschmenk@gmail.com>  Sun, 22 Sep 2013 13:32:30 -0700
+
+a2pi (0.1.0-2) unstable; urgency=low
+
+  * Fix deb package postinst script
+
+ -- David Schmenk <dschmenk@gmail.com>  Sun, 22 Sep 2013 13:02:32 -0700
+
+a2pi (0.1.0-1) unstable; urgency=low
+
+  * Initial release
 
  -- David Schmenk <dschmenk@gmail.com>  Thu, 19 Sep 2013 18:28:32 -0700

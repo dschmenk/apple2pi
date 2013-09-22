@@ -19,19 +19,45 @@ set -e
 
 case "$1" in
     remove|upgrade|deconfigure)
-	rm /usr/local/bin/a2pid
-	rm /usr/local/bin/a2mon
-        rm /usr/local/bin/dskread
-	rm /usr/local/bin/dskwrite
-	rm /usr/local/bin/a2term
-	rm /usr/local/bin/fusea2pi
-	rm /usr/local/bin/a2joy
-	rm /usr/local/bin/a2joymou
-	rm /usr/local/bin/a2joypad
-	rm /usr/local/bin/a2mount
-	rm /usr/local/bin/bload
-	rm /usr/local/bin/brun
-	rm /usr/local/sbin/a2pid
+	if [ -f /usr/local/bin/a2pid ] ; then
+	    rm /usr/local/bin/a2pid
+	fi
+	if [ -f /usr/local/bin/a2mon ] ; then
+	    rm /usr/local/bin/a2mon
+	fi
+	if [ -f /usr/local/bin/dskread ] ; then
+            rm /usr/local/bin/dskread
+	fi
+	if [ -f /usr/local/bin/dskwrite ] ; then
+	    rm /usr/local/bin/dskwrite
+	fi
+	if [ -f /usr/local/bin/a2term ] ; then
+	    rm /usr/local/bin/a2term
+	fi
+	if [ -f /usr/local/bin/fusea2pi ] ; then
+	    rm /usr/local/bin/fusea2pi
+	fi
+	if [ -f /usr/local/bin/a2joy ] ; then
+	    rm /usr/local/bin/a2joy
+	fi
+	if [ -f /usr/local/bin/a2joymou ] ; then
+	    rm /usr/local/bin/a2joymou
+	fi
+	if [ -f /usr/local/bin/a2joypad ] ; then
+	    rm /usr/local/bin/a2joypad
+	fi
+	if [ -f /usr/local/bin/a2mount ] ; then
+	    rm /usr/local/bin/a2mount
+	fi
+	if [ -f /usr/local/bin/bload ] ; then
+	    rm /usr/local/bin/bload
+	fi
+	if [ -f /usr/local/bin/brun ] ; then
+	    rm /usr/local/bin/brun
+	fi
+	if [ -f /usr/local/sbin/a2pid ] ; then
+	    rm /usr/local/sbin/a2pid
+	fi
     ;;
 
     failed-upgrade)

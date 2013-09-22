@@ -18,8 +18,8 @@
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC=a2pid             # Introduce a short description here
 NAME=a2pid             # Introduce the short server's name here
-DAEMON=/usr/sbin/a2pid # Introduce the server's location here
-DAEMON_ARGS="--daemon"             # Arguments to run the daemon with
+DAEMON=/sbin/a2pid     # Introduce the server's location here
+DAEMON_ARGS="--daemon" # Arguments to run the daemon with
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
@@ -46,13 +46,11 @@ do_start()
 	#   1 if daemon was already running
 	#   2 if daemon could not be started
 	#start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null || return 1
-	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- \
-		$DAEMON_ARGS \
-		|| return 2
+	#start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- \ $DAEMON_ARGS \ || return 2
+	$DAEMON $DAEMON_ARGS $DAEMON_OPTS || return 2
 	# Add code here, if necessary, that waits for the process to be ready
 	# to handle requests from services started subsequently which depend
 	# on this one.  As a last resort, sleep for some time.
-	wait 1
 }
 
 #
