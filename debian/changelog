@@ -1,3 +1,21 @@
+a2pi (0.1.1-2) unstable; urgency=low
+
+  * Add user 'pi' to group 'fuse'
+
+ -- David Schmenk <dschmenk@gmail.com>  Sun, 22 Sep 2013 15:16:00 -0700
+
+a2pi (0.1.1-1) unstable; urgency=low
+
+  * Clean up daemon restart code
+
+ -- David Schmenk <dschmenk@gmail.com>  Sun, 22 Sep 2013 15:00:00 -0700
+
+a2pi (0.1.0-4) unstable; urgency=low
+
+  * Remove hard-coded path in a2mount
+
+ -- David Schmenk <dschmenk@gmail.com>  Sun, 22 Sep 2013 14:32:30 -0700
+
 a2pi (0.1.0-3) unstable; urgency=low
 
   * Fix for daemon start

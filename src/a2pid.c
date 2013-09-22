@@ -637,6 +637,8 @@ void main(int argc, char **argv)
     /*
      * Add signal handlers.
      */
+    if (signal(SIGTERM, sig_bye) == SIG_ERR)
+	die("signal");
     if (signal(SIGINT, sig_bye) == SIG_ERR)
 	die("signal");
     if (signal(SIGHUP, sig_bye) == SIG_ERR)
