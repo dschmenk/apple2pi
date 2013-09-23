@@ -730,12 +730,6 @@ void main(int argc, char **argv)
     evrely.type = EV_REL;
     evrely.code = REL_Y;
     evsync.type = EV_SYN;
-#if defined(SETSERCLK) && defined(__ARMEL__)
-    /*
-     * Initialize ACIA clock for Apple II Pi card
-     */
-    gpclk(271); /* divisor for ~1.8 MHz => (500/271) MHz */
-#endif
     /*
      * Open serial port.
      */
@@ -753,7 +747,14 @@ void main(int argc, char **argv)
     newtio.c_cc[VTIME] = 0; /* inter-character timer unused */
     newtio.c_cc[VMIN]  = 1; /* blocking read until 1 char received */
     tcsetattr(a2fd, TCSANOW, &newtio);
-    prlog("a2pid: Waiting...\n");
+    prlog("a2pid: Waiting to connect to Apple II...\n");
+#if defined(SETSERCLK) && defined(__ARMEL__)
+    /*
+     * Initialize ACIA clock for Apple II Pi card
+     */
+    gpclk(271); /* divisor for ~1.8 MHz => (500/271) MHz */
+    sleep(1);   /* give clock chance to settle down */
+#endif
     iopkt[0] = 0x80;  /* request re-sync if Apple II already running */
     write(a2fd, iopkt, 1);        
     if (read(a2fd, iopkt, 1) == 1)
