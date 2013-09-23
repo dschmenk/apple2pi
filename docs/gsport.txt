@@ -1,0 +1,79 @@
+1.0 Introduction:
+=================
+This document describes the GSport GS emulator enhanced functions for usage with Apple II Pi.  There are two options for running GSport.  If you want a full-screen, immersive experience, the gsportfb emulator is run from the console.  When running the X GUI, the gsportx emulator is run in a window alongside other X applications.  See http://gsport.sourceforge.net for further information.
+
+2.0 Contents:
+=============
+
+	Keyboard Input
+	--------------
+	Delete key
+	Open-Apple/Solid-Apple keys
+	Control Panel key sequence
+	Shift+F-10
+	
+	Joystick Input
+	--------------
+	Running the a2joy driver
+	GSport configuration
+	
+	Apple II storage media
+	----------------------
+	Apple II Pi FUSE driver
+	GSport disk configuration
+	Caveats
+	
+3.0 Keyboard Input:
+===================
+Although it appears you are using an Apple II keyboard on an Apple II, in reality you are using a Linux keyboard that just so happens to be an Apple II keyboard on a GS emulator running in Linux.  To make the Apple II keyboard useable under Linux, some of the key functions are different than when used as just a Apple II.  The mappings are mostly the same, but a few of the differences are noted below.  Look at docs/input.txt for further information in the Linux functions of the Apple II Pi keyboard.
+
+3.1 Delete key:
+---------------
+The Delete key has been mapped to BackSpace for Linux.  To get the expected Delete key function under GSport, use the Solid-Apple+Delete to get the $7F character.
+
+3.2 Open-Apple/Solid-Apple keys:
+--------------------------------
+The Open-Apple key is mapped to Alt, which GSPort maps back to Open-Apple, so most operations that use Open-Apple should work as expected.  The Solid-Apple keys is mapped to a Function key modifier.  GSport will map F2 to Solid-Apple (Option) which is Solid-Apple+2 on the Apple II Pi keyboard.
+
+3.3 Control Panel key sequence:
+-------------------------------
+The Apple IIgs has a Control Panel that is accessed with Open-Apple+Ctrl+Esc.  To get this to work under GSport and Apple II Pi, the sequence Open-Apple+Solid-Apple+Escape is substituted to get the Control Panel to open.
+
+3.4 Shift+F-10:
+---------------
+When running the full-screen framebuffer GSport emulator, the only way to cleanly exit the emulator is with Shift+F-10 (Solid-Apple+Shift+0).
+
+4.0 Joystick Input:
+===================
+It is very exciting to be able to provide a Linux joystick driver for Apple II joysticks.  The Apple II joystick will operate under GSport exactly like it does when running on Apple II hardware.
+
+4.1 Running th a2joy driver:
+----------------------------
+The a2joy driver works with Apple II Pi and the Linux input subsystem to provide joystick events to applications.  The a2joy driver can be set up to automatically start when the computer boots, or manually run before GSport is started.  To run manually, type 'sudo a2joy' from the command line.  The a2joy driver runs constanly in the background to poll the joystick.  It is very low overhead, but if you need every cycle the Pi provides, you may kill the driver after running GSport with 'sudo killall a2joy'.
+
+4.2 GSport configuration:
+-------------------------
+To get GSport to use the ative Linux joystick, enter the GSport Configuration Panel with F-4 (Solid-Apple+4), go to the joystick configuration, and select "Native Joystick 1".
+
+5.0 Apple II storage media:
+===========================
+Another exciting feature of Apple II Pi is access to the underlying Apple II storage media from Linux.  To facilitate the access from GSport, raw device files that look like normal Linux files but in actuality map to the physical devices underneath.
+
+5.1 Apple II Pi FUSE driver:
+============================
+FUSE is the name of the Filesystem in USerSpacE subsystem.  This allows a driver to provide file access to devices and formats that aren't supported in the Linux kernel.  Apple II Pi provides a FUSE driver (see docs/fuse.txt for details) that accesses the ProDOS devices and files mounted on the Apple II.  When mounted, each ProDOS volume shows up under a directory matching the volume name.  Files are shown upper-case to set tem off from other filesystems.  Extra ProDOS information is embedded in the filenames so the files can be moved to other filesystems without loss of data.  GSport can use the raw device files to gain access to the physical media, although with a performance hit (it is, after all, running on real Apple II hardware at 1 MHz).
+
+5.2 GSport disk configuration:
+------------------------------
+GSport can be configured to use files for different disk mappings through the config.txt file or throught the F-4 Configuration Panel.  There is no requirement that Apple II Pi devices have to mapped to the same GSport device.
+
+5.3 Caveats:
+------------
+The FUSE driver has an option to make the raw device files writeable.  This can be very dangerous, as Linux thinks it has exlusive use of the hardware.  If GSport has write access to the device file, it is best to stay out of the Linux mapped ProDOS files until GSport has exited.
+
+6. Conclusion:
+==============
+Apple II Pi and GSport work together to provide an experience closer to an accelerated Apple IIgs than an emulator running in a window on a foreign machine.  Be careful, it is actually hard to differentiate what environment you are really running.  Take a moment before you just switch off the power when you are done!  Always exit GSport with Solid-Apple+F10, then exit Linux cleanly with 'sudo halt'.
+
+Enjoy,
+	Dave Schmenk

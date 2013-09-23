@@ -162,7 +162,7 @@ int keycode[256] = {
                            KEY_LEFTBRACE,   // [      code 5B
                            KEY_BACKSLASH,   // \      code 5C
                            KEY_RIGHTBRACE,  // ]      code 5D
-                           MOD_SHIFT | KEY_6,           // ^      code 5E
+               MOD_SHIFT | KEY_6,           // ^      code 5E
                MOD_SHIFT | KEY_MINUS,       // _      code 5F
                            KEY_GRAVE,       // `      code 60
                            KEY_A,           // a      code 61

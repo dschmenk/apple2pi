@@ -1,5 +1,5 @@
 1.0 Introduction:
-================
+=================
 This documents the utilities included in the Apple II Pi project.  See the project README.md for installation instructions.
 
 2.0 Contents:
