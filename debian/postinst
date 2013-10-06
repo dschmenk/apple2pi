@@ -25,7 +25,7 @@ case "$1" in
         #
         if [ "$(grep ttyAMA0 /boot/cmdline.txt)" != "" ] ; then
 	    mv /boot/cmdline.txt /boot/cmdline.bak
-	    echo "dwc_otg.lpm_enable=0 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline rootwait" > /boot/cmdline.txt
+	    sed -i 's/console=ttyAMA0,[0-9]* kgdboc=ttyAMA0,[0-9]* //g' /boot/cmdline.txt
         fi
         #
         # Disable getty on built-in serial port.
