@@ -1,3 +1,9 @@
+a2pi (0.1.1-4) unstable; urgency=low
+
+  * Fix update to /boot/cmdline.txt (again) - thanks Ivan Drucker!
+
+ -- David Schmenk <dschmenk@gmail.com>  Sun, 6 Oct 2013 14:31:35 -0700
+
 a2pi (0.1.1-3) unstable; urgency=low
 
   * Fix update to /boot/cmdline.txt - thanks Ivan Drucker!

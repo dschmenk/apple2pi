@@ -24,7 +24,7 @@ case "$1" in
         # Update /boot partition files.
         #
         if [ "$(grep ttyAMA0 /boot/cmdline.txt)" != "" ] ; then
-	    mv /boot/cmdline.txt /boot/cmdline.bak
+	    cp /boot/cmdline.txt /boot/cmdline.bak
 	    sed -i 's/console=ttyAMA0,[0-9]* kgdboc=ttyAMA0,[0-9]* //g' /boot/cmdline.txt
         fi
         #
