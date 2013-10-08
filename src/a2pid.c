@@ -764,7 +764,6 @@ void main(int argc, char **argv)
 	    prlog("a2pid: Connected.\n");
 	    iopkt[0] = 0x81;  /* acknowledge */
 	    write(a2fd, iopkt, 1);
-	    tcflush(a2fd, TCIFLUSH);
 	}
 	else if (iopkt[0] == 0x9F)     /* bad request from Apple II */
 	{

@@ -17,7 +17,8 @@
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC=a2pid             # Introduce a short description here
-NAME=a2pid             # Introduce the short server's name here
+NAME=a2pi              # Introduce the short server's name here
+NAMED=a2pid
 DAEMON=/sbin/a2pid     # Introduce the server's location here
 DAEMON_ARGS="--daemon" # Arguments to run the daemon with
 PIDFILE=/var/run/$NAME.pid
@@ -47,6 +48,7 @@ do_start()
 	#   2 if daemon could not be started
 	#start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null || return 1
 	#start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- \ $DAEMON_ARGS \ || return 2
+	killall -HUP $NAMED
 	$DAEMON $DAEMON_ARGS $DAEMON_OPTS || return 2
 	# Add code here, if necessary, that waits for the process to be ready
 	# to handle requests from services started subsequently which depend
@@ -77,7 +79,7 @@ do_stop()
 	# Many daemons don't delete their pidfiles when they exit.
 	#rm -f $PIDFILE
 	#return "$RETVAL"
-	killall $NAME
+	killall -HUP $NAMED
 }
 
 #
