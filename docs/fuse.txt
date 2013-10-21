@@ -39,17 +39,17 @@ The FUSE driver can be run directly, but the a2mount script removes some of the 
 
 4.1 fusea2pi:
 -------------
-The FUSE driver for Apple II Pi works closely with the Apple II environment to relect the FUSE function call into a ProDOS MLI call.  fusea2pi knows very little about the details of ProDOS.  PRoDOS itself does most of the work so that compatibility is guaranteed.
+The FUSE driver for Apple II Pi works closely with the Apple II environment to reflect the FUSE function call into a ProDOS MLI call.  fusea2pi knows very little about the details of ProDOS.  PRoDOS itself does most of the work so that compatibility is guaranteed.
 
 At startup, fusea2pi calls the ProDOS on_line funtion to retrieve all the ProDOS volumes available to the Apple II.  fusea2pi then makes a directory for each volume named after the volume.  In addition, each volume is made available as a raw device file named after it's position in the ProDOS device table.  The two default 5 1/4 drives in slot 6 are always made available for non-ProDOS format floppies that can still be accessed in a raw mode.  This way, volumes can be easily backed up (copied elsewhere) and emulators can have access to the physical media.
 
-ProDOS filenames are munged in the same way that CiderPress attaches the meta information, type and aux, to the end of the filename, separated by '#'.  Also, filenames are displayed in upper-case.  The decision to munge the filenames in this was it in order to make a very visual distincion between the ProDOS files and regular *nix files.
+ProDOS filenames are munged in the same way that CiderPress attaches the meta information, type and aux, to the end of the filename, separated by '#'.  Also, filenames are displayed in upper-case.  The decision to munge the filenames this way was to make a very visual distinction between the ProDOS files and regular *nix files.
 
 The driver can run directly, but the helper script a2mount is the recommended way to mount ProDOS volumes.  Run as:
 
 fusea2pi <mount point> [fuse options..] [+rw]
 
-The last option (must be last) is a fusea2pi only option which allows the raw device files to be writeable.  By default, they are read-only.  It can be potentially dangerous to write to the raw device while Linux accesses the mounted filesystem.  If an emulator is going to be writing to the raw device files, it is best to leave the mounted filesystem alone until the emulator is exited.
+The last option (must be last) is a fusea2pi only option which allows the raw device files to be writeable.  By default, they are read-only.  It can be potentially dangerous to write to the raw device while Linux accesses the mounted filesystem.  If an emulator is going to be writing to the raw device files, it is best to leave the mounted filesystem alone until the emulator has exited.
 
 4.2 a2mount:
 ------------
