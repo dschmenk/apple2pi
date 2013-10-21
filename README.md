@@ -1,6 +1,10 @@
 apple2pi
 ========
 
+What is the Apple II Pi?
+------------------------
+Basically, the Apple II Pi is the integration of an Apple IIe, IIc, or IIgs with a Raspberry Pi (http://www.raspberrypi.org) to create a hybrid computer combining the input devices and storage mediums of the Apple with the CPU, GPU (graphical processing unit), USB, and network capabilities of the Broadcom BCM2835 SoC (think smartphone processor).  The concept is to create an updated version of the Apple II using some imagination, low-level drivers, off-the-shelf hardware, and a closely coupled communications channel; thus bringing semi-modern hardware and 32 bit *nix software to the Apple II platform.  The Apple II is running as a dedicated I/O processor for the Raspberry Pi under ProDOS.  The Raspberry Pi is running a version of Debian Linux: Raspbian.  Much like the PC Transporter card brought MS-DOS and the Z-80 card brought CP/M, the Apple II Pi brings Linux to the Apple II using the Apple’s input devices and the Raspberry Pi’s video output.  As such, knowledge and familiarity with Linux is required to get the most out of its environment.  Under Linux, the Apple II Pi can read and write the Apple’s storage devices (floppies/harddrives/CFFA) and also run the GSport Apple IIgs emulator (http://gsport.sourceforge.net).  Together, GSport and Apple II Pi provide an immersive environment providing access to most of the Apple II hardware you own plus an accelerated ~20MHz 65816 with up to 8 MB RAM, and all the disk images you can fit on the SD card.
+
 Apple II client/server for Raspberry Pi
 ---------------------------------------
 
