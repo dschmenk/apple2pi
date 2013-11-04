@@ -332,8 +332,6 @@ int keycode[256] = {
 #define	RUN	0
 #define	STOP	1
 #define	RESET	2
-int accel[32] = { 0,  1,  4,  8,  9,  10,  11,  12, 13, 14, 15, 16, 17, 18, 19, 20
-    -21, -20, -19, -18, -17, -16, -15, -14, -13, -12, -11, -10, -9, -8, -4, -1}; 
 volatile int state = RUN, isdaemon = FALSE;
 struct input_event evkey, evrelx, evrely, evsync;
 
@@ -441,10 +439,15 @@ void sendbttn(int fd, int mod, int bttn)
 }
 void sendrelxy(int fd, int x, int y)
 {
-    if (x > 4 || x < -4) x = x *4;
-    else x = accel[x & 0x1F];
-    if (y > 4 || y < -4) y = y * 4;
-    else y = accel[y & 0x1F];
+#if 0
+    static int accel[32] = { 0,  1,  4,  8,  9,  10,  11,  12, 13, 14, 15, 16, 17, 18, 19, 20,
+    -21, -20, -19, -18, -17, -16, -15, -14, -13, -12, -11, -10, -9, -8, -4, -1}; 
+    x = ((x > 4) || (x < -4)) ? x * 2 : accel[x & 0x1F];
+    y = ((y > 4) || (y < -4)) ? y * 2 : accel[y & 0x1F];
+#else
+    x = x < 0 ? -x * x : x * x;
+    y = y < 0 ? -y * y : y * y;
+#endif
     evrelx.value = x;
     evrely.value = y;
     write(fd, &evrelx, sizeof(evrelx));
@@ -847,7 +850,7 @@ reset:
 				//state = STOP;
 			    break;
 			case 0x84: /* mouse move event */
-			    // printf("Mouse XY Event: %d,%d\n", (signed char)iopkt[1], (signed char)iopkt[2]);
+			    //printf("Mouse XY Event: %d,%d\n", (signed char)iopkt[1], (signed char)iopkt[2]);
 			    sendrelxy(moufd, (signed char)iopkt[1], (signed char)iopkt[2]);
 			    break;
 			case 0x86: /* mouse button event */
