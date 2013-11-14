@@ -34,7 +34,7 @@ case "$1" in
 	case "$ttyline" in
 	T0*)
 	    mv /etc/inittab /etc/inittab.bak
-	    sed 's/^T0*/#T0*/' /etc/inittab.bak > /etc/inittab
+	    sed 's/^T0/#T0/' /etc/inittab.bak > /etc/inittab
             ;;
 	*)
 	    ;;

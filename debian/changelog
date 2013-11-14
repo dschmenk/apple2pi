@@ -1,3 +1,9 @@
+a2pi (0.1.4-2) unstable; urgency=low
+
+  * Fix postinst to not comment out all T* lines
+
+ -- David Schmenk <dschmenk@gmail.com>  Mon, 10 Nov 2013 04:48:20 -0800
+
 a2pi (0.1.4-1) unstable; urgency=low
 
   * Change mouse accleration code from table lookup to squared value
