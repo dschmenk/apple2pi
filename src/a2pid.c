@@ -445,8 +445,8 @@ void sendrelxy(int fd, int x, int y)
     x = ((x > 4) || (x < -4)) ? x * 2 : accel[x & 0x1F];
     y = ((y > 4) || (y < -4)) ? y * 2 : accel[y & 0x1F];
 #else
-    x = x < 0 ? -x * x : x * x;
-    y = y < 0 ? -y * y : y * y;
+    x = ((x > 3) || (x < -3)) ? x * 9 : (x < 0 ? -x * x : x * x);
+    y = ((y > 3) || (y < -3)) ? y * 9 : (y < 0 ? -y * y : y * y);
 #endif
     evrelx.value = x;
     evrely.value = y;
