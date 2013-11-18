@@ -1,3 +1,9 @@
+a2pi (0.1.5-1) unstable; urgency=low
+
+  * One more attempt at mouse acceleration, Apple ][/][+ support
+
+ -- David Schmenk <dschmenk@gmail.com>  Mon, 16 Nov 2013 22:17:40 -0800
+
 a2pi (0.1.4-2) unstable; urgency=low
 
   * Fix postinst to not comment out all T* lines
