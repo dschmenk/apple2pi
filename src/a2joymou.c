@@ -138,6 +138,7 @@ void main(int argc, char **argv)
 	if (gptoggle)
 	{
 	    a2quickcall(pifd, READGP0, &relx);
+#if 0
 	    if (relx >= cntrx + 20)		
 		evrelx.value = (relx - cntrx) / 2;
 	    else if (relx >= cntrx)		
@@ -146,6 +147,13 @@ void main(int argc, char **argv)
 		evrelx.value = (relx - cntrx) / 2;
 	    else		
 		evrelx.value = -accel[cntrx - relx];
+#else
+            evrelx.value = (relx - cntrx) / 12;
+            if (evrelx.value < 0)
+                evrelx.value *= -evrelx.value;
+            else
+                evrelx.value *= evrelx.value;
+#endif
 	    write(joyfd, &evrelx, sizeof(evrelx));
 	    write(joyfd, &evrely, sizeof(evrely));
 	    write(joyfd, &evsync, sizeof(evsync));
@@ -154,6 +162,7 @@ void main(int argc, char **argv)
 	else
 	{
 	    a2quickcall(pifd, READGP1, &rely);
+#if 0            
 	    if (rely >= cntry + 20)		
 		evrely.value = (rely - cntry) / 2;
 	    else if (rely >= cntry)		
@@ -162,7 +171,14 @@ void main(int argc, char **argv)
 		evrely.value = (rely - cntry) / 2;
 	    else		
 		evrely.value = -accel[cntry - rely];
-	}
+#else
+            evrely.value = (rely - cntry) / 12;
+            if (evrely.value < 0)
+                evrely.value *= -evrely.value;
+            else
+                evrely.value *= evrely.value;
+#endif
+        }
 	gptoggle ^= 1;
 	a2read(pifd, BTTN_IO, 2, bttns);
 	if ((bttns[0] & 0x80) != prevbttns[0]) 
