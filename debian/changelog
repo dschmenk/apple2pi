@@ -1,3 +1,16 @@
+a2pi (0.1.7-2) unstable; urgency=low
+
+  * Adjust file permissions for FUSE driver to allow group access
+  * Add options to allow root to access FUSE mount point (for GSport)
+
+ -- David Schmenk <dschmenk@gmail.com>  Fri, 06 Dec 2013 20:39:14 -0800
+
+a2pi (0.1.6-1) unstable; urgency=low
+
+  * One more attempt at mouse acceleration.  Better inital Apple client setup.
+
+ -- David Schmenk <dschmenk@gmail.com>  Sun, 1 Dec 2013 18:59:17 -0800
+
 a2pi (0.1.5-1) unstable; urgency=low
 
   * One more attempt at mouse acceleration, Apple ][/][+ support

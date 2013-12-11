@@ -115,9 +115,10 @@ pthread_mutex_t a2pi_busy = PTHREAD_MUTEX_INITIALIZER;
 #define	A2PI_WAIT	pthread_mutex_lock(&a2pi_busy)
 #define	A2PI_RELEASE	pthread_mutex_unlock(&a2pi_busy)
 /*
- * Raw device write flag.
+ * Write flags.
  */
 int raw_dev_write = FALSE;
+int write_perms   = 0;
 /*
  * Filename & date/time conversion routines.
  */
@@ -216,12 +217,12 @@ struct stat *unix_stat(struct stat *stbuf, int storage, int access, int blocks, 
     memset(stbuf, 0, sizeof(struct stat));
     if (storage == 0x0F || storage == 0x0D)
     {
-	stbuf->st_mode = (access & 0xC3) == 0xC3 ? S_IFDIR | 0744 : S_IFDIR | 0544;
+	stbuf->st_mode = (access & 0xC3) == 0xC3 ? S_IFDIR | (write_perms | 0555) : S_IFDIR | 0555;
 	stbuf->st_nlink = 2;
     }
     else
     {
-	stbuf->st_mode   = (access & 0xC3) == 0xC3 ? S_IFREG | 0644 : S_IFREG | 0444;
+	stbuf->st_mode   = (access & 0xC3) == 0xC3 ? S_IFREG | (write_perms | 0444) : S_IFREG | 0444;
 	stbuf->st_nlink  = 1;
 	stbuf->st_blocks = blocks;
 	stbuf->st_size   = size;
@@ -868,7 +869,7 @@ static int a2pi_getattr(const char *path, struct stat *stbuf)
 	/*
 	 * Root directory of volumes.
 	 */
-	unix_stat(stbuf, 0x0F, 0x01, 0, 0, 0, 0);
+	unix_stat(stbuf, 0x0F, 0xC3, 0, 0, 0, 0);
     }
     else
     {
@@ -1378,6 +1379,7 @@ int main(int argc, char *argv[])
     if (strcmp(argv[argc - 1], "+rw") == 0)
     {
 	raw_dev_write = TRUE;
+        write_perms   = 0220;
 	argc--;
     }
     umask(0);

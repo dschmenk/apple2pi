@@ -1,2 +1,2 @@
 #!/bin/bash
-fusea2pi $1 -o uid=`id -u` -o gid=`id -g` $2
+fusea2pi $1 -o allow_root -o uid=`id -u` -o gid=`id -g` $2

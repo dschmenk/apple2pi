@@ -51,6 +51,13 @@ case "$1" in
 	addgroup pi fuse
 	# addgroup pi input # already there by default
 	#
+	# Allow other users (root) to access FUSE mount points
+	#
+	if [ "$(grep \#user_allow_other /etc/fuse.conf)" != "" ] ; then
+	    mv /etc/fuse.conf /etc/fuse.conf.bak
+	    sed 's/^#user_allow_other/user_allow_other/' /etc/fuse.conf.bak > /etc/fuse.conf
+	fi
+	#
 	# Add schmenk.is-a-geek.com to apt sources
 	#
 	if [ "$(grep schmenk /etc/apt/sources.list)" = "" ] ; then
