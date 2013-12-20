@@ -1,7 +1,8 @@
-a2pi (0.1.7-2) unstable; urgency=low
+a2pi (0.1.7-3) unstable; urgency=low
 
   * Adjust file permissions for FUSE driver to allow group access
   * Add options to allow root to access FUSE mount point (for GSport)
+  * Update Apple ][+ keyboard support (Caps Lock)
 
  -- David Schmenk <dschmenk@gmail.com>  Fri, 06 Dec 2013 20:39:14 -0800
 

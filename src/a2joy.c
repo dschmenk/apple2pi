@@ -130,7 +130,8 @@ void main(int argc, char **argv)
     a2write(pifd, READGP0, sizeof(readgp), readgp);
     readgp[1] = 1;
     a2write(pifd, READGP1, sizeof(readgp), readgp);
-    a2call(pifd, READGP0, &evabsx.value);
+    //a2call(pifd, READGP0, &evabsx.value);
+    evabsx.value = -1;
     a2read(pifd, BTTN_IO, 2, prevbttns);
     a2call(pifd, READGP1, &evabsy.value);
     gptoggle = 0;
