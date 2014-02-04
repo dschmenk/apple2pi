@@ -1,3 +1,8 @@
+a2pi (0.1.8-0) unstable; urgency=low
+
+  * Fix FUSE create file function
+
+ -- David Schmenk <dschmenk@gmail.com>  Tue, 04 Feb 2014 13:43:53 -0800
 a2pi (0.1.7-3) unstable; urgency=low
 
   * Adjust file permissions for FUSE driver to allow group access

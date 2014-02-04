@@ -99,4 +99,12 @@ void gpclk(int idiv)
     release_io(gpio);
     release_io(cmgp);
 }
-
+#ifndef SETSERCLK
+int main(void)
+{
+        /*
+     * Initialize ACIA clock for Apple II Pi card
+     */
+    gpclk(271); /* divisor for ~1.8 MHz => (500/271) MHz */
+}
+#endif

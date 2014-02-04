@@ -1262,7 +1262,7 @@ static int a2pi_create(const char * path, mode_t mode, struct fuse_file_info *fi
     {
 	err = prodos_map_errno(prodos_create(prodos_name, 0xC3, type, aux, 0));
     }
-    if (refnum == 0)
+    else if (refnum > 0)
     {
 	prodos_set_eof(refnum, 0);
 	prodos_close(refnum, &io_buff);
