@@ -7,11 +7,13 @@
 #include <unistd.h>
 #include <termios.h>
 #include <string.h>
-#include <signal.h>
 #include <netinet/in.h>
+#include <time.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <linux/input.h>
 #include <linux/uinput.h>
 
@@ -53,6 +55,10 @@ struct {
     int fd;
     int flags;
 } a2client[MAX_CLIENT];
+/*
+ * Virtual drive info
+ */
+int vdrivefd[2];
 /*
  * ASCII to scancode conversion
  */
@@ -333,6 +339,121 @@ int keycode[256] = {
 #define	STOP	1
 #define	RESET	2
 volatile int state = RUN, isdaemon = FALSE;
+void prlog(char *str)
+{
+    if (!isdaemon)
+	puts(str);
+}
+static void sig_bye(int signo)
+{
+    /*
+     * Exit gracefully
+     */
+    state = STOP;
+}
+/*****************************************************************\
+*                                                                 *
+*                         VDRIVE commands                         *
+*                                                                 *
+\*****************************************************************/
+int vdriveopen(char *path)
+{
+    char filename[256];
+    strcpy(filename, path);
+    strcat(filename, "A2VD1.PO");
+    //printf("vdrive: open %s\n", filename);
+    if ((vdrivefd[0] = open(filename, O_RDWR, 0)) < 0)
+        return 0;
+    strcpy(filename, path);
+    strcat(filename, "A2VD2.PO");
+    //printf("vdrive: open %s\n", filename);
+    if ((vdrivefd[1] = open(filename, O_RDWR, 0)) < 0)
+    {
+        close(vdrivefd[0]);
+        return 0;
+    }
+    prlog("vdrive: opened successfully\n");
+    return 1;
+}
+int vdriveclose(void)
+{
+    return close(vdrivefd[0]) | close(vdrivefd[1]);
+}
+unsigned int prodos_time(int year, int month, int day, int hour, int minute)
+{
+    if (year > 99)
+	year -= 100;
+    month += 1;
+    return (day    & 0x1F) 
+        | ((month  & 0x0F) << 5) 
+        | ((year   & 0x7F) << 9)
+	| ((minute & 0x3F) << 16) 
+        | ((hour   & 0x1F) << 24);
+}
+void vdrivecmd(int fd, int command, int block, unsigned char crc_in)
+{
+    int i;
+    unsigned char crc_out = crc_in, block_buff[512];
+    
+    if (command == 0x01 || command == 0x03 || command == 0x05)
+    {
+        //printf("vdrive: read block=%d from unit:%d\n", block, command >> 2);
+        block_buff[0] = 0xC5;
+        block_buff[1] = command;
+        block_buff[2] = block;
+        block_buff[3] = block >> 8;        
+        write(fd, block_buff, 4);
+        if (command > 0x01)
+        {
+            unsigned char time_buff[4];
+            /*
+             * Get ProDOS time.
+             */
+            time_t now = time(NULL);
+            struct tm *tm = localtime(&now);
+            int ptime = prodos_time(tm->tm_year, tm->tm_mon, tm->tm_mday, tm->tm_hour, tm->tm_min);
+            time_buff[0] = (unsigned char) ptime;
+            time_buff[1] = (unsigned char) (ptime >> 8);
+            time_buff[2] = (unsigned char) (ptime >> 16);
+            time_buff[3] = (unsigned char) (ptime >> 24);
+            write(fd, time_buff, 4);
+            crc_out ^= time_buff[0] ^ time_buff[1] ^ time_buff[2] ^ time_buff[3];
+        }
+        lseek(vdrivefd[command >> 2], block * 512, 0);
+        write(fd, &crc_out, 1);
+        read(vdrivefd[command >> 2], block_buff, 512);
+        write(fd, block_buff, 512);
+        for (crc_out = i = 0; i < 512; i++)
+            crc_out ^= block_buff[i];
+        write(fd, &crc_out, 1);
+    }
+    else if (command == 0x02 || command == 0x04)
+    {
+        //printf("vdrive: write block=%d to unit:%d\n", block, command >> 2);
+        for (crc_out = i = 0; i < 512; i++)
+        {
+            read(fd, &block_buff[i], 1);
+            crc_out ^= block_buff[i];
+        }
+        lseek(vdrivefd[command >> 2], block * 512, 0);
+        read(fd, &crc_in, 1);
+        if (crc_in == crc_out)
+            write(vdrivefd[command >> 2], block_buff, 512);
+        block_buff[0] = 0xC5;
+        block_buff[1] = command;
+        block_buff[2] = block;
+        block_buff[3] = block >> 8;        
+        block_buff[4] = crc_out;        
+        write(fd, block_buff, 5);
+    }
+    else
+        state = RESET; // ??? What else to do ???
+}
+/*****************************************************************\
+*                                                                 *
+*                      Input device handling                      *
+*                                                                 *
+\*****************************************************************/
 struct input_event evkey, evrelx, evrely, evsync;
 
 void sendkeycodedown(int fd, int code)
@@ -454,6 +575,11 @@ void sendrelxy(int fd, int x, int y)
     write(fd, &evrely, sizeof(evrely));
     write(fd, &evsync, sizeof(evsync));
 }
+/*****************************************************************\
+*                                                                 *
+*                    Request queue management                     *
+*                                                                 *
+\*****************************************************************/
 int writeword(int fd, int word, char ack)
 {
     char rwchar;
@@ -468,11 +594,6 @@ int writeword(int fd, int word, char ack)
 	    return TRUE;
     }
     return FALSE;
-}
-void prlog(char *str)
-{
-    if (!isdaemon)
-	puts(str);
 }
 struct a2request *addreq(int a2fd, int clidx, int type, int addr, int count, char *buffer)
 {
@@ -594,23 +715,22 @@ void flushreqs(int a2fd, int clidx, int status, int result)
 	}
     }
 }
-static void sig_bye(int signo)
-{
-    /*
-     * Exit gracefully
-     */
-    state = STOP;
-}
+/*****************************************************************\
+*                                                                 *
+*                           Main entrypoint                       *
+*                                                                 *
+\*****************************************************************/
 void main(int argc, char **argv)
 {
     struct uinput_user_dev uidev;
     struct termios oldtio,newtio;
     unsigned char iopkt[16];
-    int i, c, rdycnt;
+    int i, c, rdycnt, vdriveactive;
     int a2fd, kbdfd, moufd, srvfd, maxfd;
     struct sockaddr_in servaddr;
     fd_set readset, openset;
     char *devtty = "/dev/ttyAMA0"; /* default for Raspberry Pi */
+    char *vdrivedir = "/usr/share/a2pi/"; /* default VDRIVE image directory */
     
     /*
      * Parse arguments
@@ -733,6 +853,10 @@ void main(int argc, char **argv)
     evrely.type = EV_REL;
     evrely.code = REL_Y;
     evsync.type = EV_SYN;
+    /*
+     * Get VDRIVE images.
+     */
+    vdriveactive = vdriveopen(vdrivedir);
     /*
      * Open serial port.
      */
@@ -971,6 +1095,28 @@ reset:
 			    else
 				state = RESET;
 			    break;
+                        case 0xC5: /* virtual drive request */
+                            //printf("a2pid: vdrive request\n");
+                            if (vdriveactive)
+                            {
+                                newtio.c_cc[VMIN] = 1; /* blocking read until command packet received */
+                                tcsetattr(a2fd, TCSANOW, &newtio);
+                                if (read(a2fd, &iopkt[3], 1) + read(a2fd, &iopkt[4], 1) == 2)
+                                {
+                                    //printf("vdrive cmd:%02X blk:%d crc:%02X\n", iopkt[1], iopkt[2] | (iopkt[3] << 8), iopkt[4]);
+                                    if ((iopkt[0] ^ iopkt[1] ^ iopkt[2] ^ iopkt[3]) == iopkt[4])
+                                        vdrivecmd(a2fd, iopkt[1], iopkt[2] | (iopkt[3] << 8), iopkt[4]);
+                                    else
+                                        prlog("vdrive: bad CRC\n");
+                                }
+                                else
+                                    state = RESET;
+                                newtio.c_cc[VMIN]  = 3; /* blocking read until 3 chars received */
+                                tcsetattr(a2fd, TCSANOW, &newtio);
+                            }
+                            else
+                                state = RESET;
+                            break;
 			default:
 			    prlog("a2pid: Unknown Event\n");
 			    tcflush(a2fd, TCIFLUSH);
@@ -1110,6 +1256,8 @@ reset:
 	    close(a2client[i].fd);
     if (state == RESET)
 	goto reset;
+    if (vdriveactive)
+        vdriveclose();
     shutdown(srvfd, SHUT_RDWR);
     close(srvfd);
     tcsetattr(a2fd, TCSANOW, &oldtio);

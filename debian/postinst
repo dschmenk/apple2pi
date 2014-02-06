@@ -58,6 +58,15 @@ case "$1" in
 	    sed 's/^#user_allow_other/user_allow_other/' /etc/fuse.conf.bak > /etc/fuse.conf
 	fi
 	#
+	# Set up VSDRIVEs
+	#
+	if [ ! -f /usr/share/a2pid/A2VD1.PO ] ; then
+	    ln -s /usr/share/a2pid/A2PI-1.4.PO A2VD1.PO
+	fin
+	if [ ! -f /usr/share/a2pid/A2VD2.PO ] ; then
+	    ln -s /usr/share/a2pid/BLANKDISK.PO A2VD2.PO
+	fin
+	#
 	# Add schmenk.is-a-geek.com to apt sources
 	#
 	if [ "$(grep schmenk /etc/apt/sources.list)" = "" ] ; then
