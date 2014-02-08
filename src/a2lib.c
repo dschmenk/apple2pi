@@ -14,8 +14,8 @@ int a2open(char *ipaddr)
     int fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (fd < 0)
     {
-	perror("Cannot create socket");
-	return -1;
+        perror("Cannot create socket");
+        return -1;
     }
     memset(&piaddr, 0, sizeof(piaddr));
     piaddr.sin_family = AF_INET;
@@ -23,21 +23,21 @@ int a2open(char *ipaddr)
     res = inet_pton(AF_INET, ipaddr, &piaddr.sin_addr);
     if (res < 0)
     {
-	perror("First parameter is not a valid address family");
-	close(fd);
-	return -1;
+        perror("First parameter is not a valid address family");
+        close(fd);
+        return -1;
     }
     else if (res == 0)
     {
-	perror("Char string (second parameter does not contain valid ipaddress)");
-	close(fd);
-	return -1;
+        perror("Char string (second parameter does not contain valid ipaddress)");
+        close(fd);
+        return -1;
     }
     if (connect(fd, (struct sockaddr *)&piaddr, sizeof(piaddr)) < 0)
     {
-	perror("Connect failed");
-	close(fd);
-	return -1;
+        perror("Connect failed");
+        close(fd);
+        return -1;
     }
     return fd;
 }
@@ -84,7 +84,7 @@ int a2call(int fd, int address, int *result)
     write(fd, callpkt, 3);
     read(fd, callpkt, 2);
     if (result)
-	*result = (unsigned char)callpkt[1];
+        *result = (unsigned char)callpkt[1];
     return ((unsigned char)callpkt[0] == 0x9E);
 }
 int a2quickcall(int fd, int address, int *result)
@@ -96,6 +96,6 @@ int a2quickcall(int fd, int address, int *result)
     write(fd, callpkt, 3);
     read(fd, callpkt, 2);
     if (result)
-	*result = (unsigned char)callpkt[1];
+        *result = (unsigned char)callpkt[1];
     return ((unsigned char)callpkt[0] == 0x9E);
 }

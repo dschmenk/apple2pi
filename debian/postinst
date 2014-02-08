@@ -60,12 +60,12 @@ case "$1" in
 	#
 	# Set up VSDRIVEs
 	#
-	if [ ! -f /usr/share/a2pid/A2VD1.PO ] ; then
-	    ln -s /usr/share/a2pid/A2PI-1.4.PO A2VD1.PO
-	fin
-	if [ ! -f /usr/share/a2pid/A2VD2.PO ] ; then
-	    ln -s /usr/share/a2pid/BLANKDISK.PO A2VD2.PO
-	fin
+	if [ ! -e /usr/share/a2pi/A2VD1.PO ] ; then
+	    ln -s /usr/share/a2pi/A2PI-1.4.PO /usr/share/a2pi/A2VD1.PO
+	fi
+	if [ ! -e /usr/share/a2pi/A2VD2.PO ] ; then
+	    ln -s /usr/share/a2pi/BLANK.PO /usr/share/a2pi/A2VD2.PO
+	fi
 	#
 	# Add schmenk.is-a-geek.com to apt sources
 	#

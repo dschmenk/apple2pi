@@ -1036,7 +1036,7 @@ static int a2pi_mkdir(const char *path, mode_t mode)
 	return -EACCES;
     A2PI_WAIT;
     cachepath[0] = '\0';
-    err = prodos_map_errno(prodos_create(prodos_path(path, NULL, NULL, NULL), 0xE3, 0x0F, 0, 0));
+    err = prodos_map_errno(prodos_create(prodos_path(path, NULL, NULL, NULL), 0xC3, 0x0F, 0, 0));
     A2PI_RELEASE;
     return err;
 }

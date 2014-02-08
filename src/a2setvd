@@ -1,0 +1,6 @@
+#!/bin/bash
+a2pidcmd 0xC2
+rm /usr/share/a2pi/A2VD$1.PO
+ln -s $2 /usr/share/a2pi/A2VD$1.PO
+a2pidcmd 0xC0
+

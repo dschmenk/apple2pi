@@ -1,4 +1,4 @@
-a2pi (0.1.8-1) unstable; urgency=low
+a2pi (0.1.8-2) unstable; urgency=low
 
   * Fix FUSE create file function
   * Add VSDRIVE functionality
