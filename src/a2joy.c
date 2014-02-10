@@ -12,8 +12,8 @@
 struct timespec tv;
 struct input_event evkey, evabsx, evabsy, evsync;
 #define	BTTN_IO		0xC061
-#define	READGP0		0x380
-#define	READGP1		0x388
+#define	READGP0		0x320
+#define	READGP1		0x328
 char readgp[] = {
     0xA2, 0x00,       // LDX #PADDLE
     0x78,             // SEI

@@ -58,7 +58,7 @@ struct {
 /*
  * Virtual drive info
  */
-int vdrivefd[2];
+int vdrvfd[2];
 /*
  * ASCII to scancode conversion
  */
@@ -353,100 +353,89 @@ static void sig_bye(int signo)
 }
 /*****************************************************************\
 *                                                                 *
-*                         VDRIVE commands                         *
+*                         vdrv commands                         *
 *                                                                 *
 \*****************************************************************/
-int vdriveopen(char *path)
+int vdrvopen(char *path)
 {
     char filename[256];
     strcpy(filename, path);
     strcat(filename, "A2VD1.PO");
-    //printf("vdrive: open %s\n", filename);
-    if ((vdrivefd[0] = open(filename, O_RDWR, 0)) < 0)
-        vdrivefd[0] = 0;
+    //printf("vdrv: open %s\n", filename);
+    if ((vdrvfd[0] = open(filename, O_RDWR, 0)) < 0)
+        vdrvfd[0] = 0;
     strcpy(filename, path);
     strcat(filename, "A2VD2.PO");
-    //printf("vdrive: open %s\n", filename);
-    if ((vdrivefd[1] = open(filename, O_RDWR, 0)) < 0)
-        vdrivefd[1] = 0;
-    return vdrivefd[0] + vdrivefd[1];
+    //printf("vdrv: open %s\n", filename);
+    if ((vdrvfd[1] = open(filename, O_RDWR, 0)) < 0)
+        vdrvfd[1] = 0;
+    return vdrvfd[0] + vdrvfd[1];
 }
-void vdriveclose(void)
+void vdrvclose(void)
 {
-    if (vdrivefd[0]) close(vdrivefd[0]);
-    if (vdrivefd[1]) close(vdrivefd[1]);
-    vdrivefd[0] = vdrivefd[1] = 0;
+    if (vdrvfd[0]) close(vdrvfd[0]);
+    if (vdrvfd[1]) close(vdrvfd[1]);
+    vdrvfd[0] = vdrvfd[1] = 0;
 }
-void vdrivecmd(int afd, int command, int block, unsigned char crc_in)
+unsigned char *prodos_time(void)
 {
-    int i, vfd = vdrivefd[command >> 2];
-    unsigned char block_buff[512], crc_out = 0xC5 ^ command ^ block ^ (block >> 8);
+    static unsigned char time_buff[4];
+    /*
+     * Get ProDOS time.
+     */
+    time_t now = time(NULL);
+    struct tm *tm = localtime(&now);
+    int ptime =   (tm->tm_mday        & 0x1F) 
+              | (((tm->tm_mon  + 1)   & 0x0F) << 5) 
+              | (((tm->tm_year - 100) & 0x7F) << 9)
+              |  ((tm->tm_min         & 0x3F) << 16) 
+              |  ((tm->tm_hour        & 0x1F) << 24);
+    time_buff[0] = (unsigned char) ptime;
+    time_buff[1] = (unsigned char) (ptime >> 8);
+    time_buff[2] = (unsigned char) (ptime >> 16);
+    time_buff[3] = (unsigned char) (ptime >> 24);
+    return time_buff;
+}
+int vdrvtime(int afd)
+{
+    return write(afd, prodos_time(), 4);
+}
+int vdrvstatus(int drive)
+{
+    return vdrvfd[drive] == 0 ? 0x28 : 0x00;
+}
+int vdrvread(int afd, int drive, int block)
+{
+    int err = 0, vfd = vdrvfd[drive];
+    unsigned char block_buff[512];
 
-    if (crc_in != crc_out)
-        prlog("vdrive: CRC mismatch!\n");
-    if (command == 0x01 || command == 0x03 || command == 0x05)
+    if (vfd)
     {
-        //printf("vdrive: read block=%d from unit:%d\n", block, command >> 2);
-        block_buff[0] = 0xC5;
-        block_buff[1] = command;
-        block_buff[2] = block;
-        block_buff[3] = block >> 8;        
-        write(afd, block_buff, 4);
-        if (command > 0x01)
-        {
-            unsigned char time_buff[4];
-            /*
-             * Get ProDOS time.
-             */
-            time_t now = time(NULL);
-            struct tm *tm = localtime(&now);
-            int ptime =   (tm->tm_mday        & 0x1F) 
-                      | (((tm->tm_mon  + 1)   & 0x0F) << 5) 
-                      | (((tm->tm_year - 100) & 0x7F) << 9)
-                      |  ((tm->tm_min         & 0x3F) << 16) 
-                      |  ((tm->tm_hour        & 0x1F) << 24);
-            time_buff[0] = (unsigned char) ptime;
-            time_buff[1] = (unsigned char) (ptime >> 8);
-            time_buff[2] = (unsigned char) (ptime >> 16);
-            time_buff[3] = (unsigned char) (ptime >> 24);
-            write(afd, time_buff, 4);
-            crc_out ^= time_buff[0] ^ time_buff[1] ^ time_buff[2] ^ time_buff[3];
-        }
-        write(afd, &crc_out, 1);
-        if (vfd)
-        {
-            lseek(vfd, block * 512, 0);
-            read(vfd, block_buff, 512);
-        }
-        write(afd, block_buff, 512);
-        for (crc_out = i = 0; i < 512; i++)
-            crc_out ^= block_buff[i];
-        write(afd, &crc_out, 1);
-    }
-    else if (command == 0x02 || command == 0x04)
-    {
-        //printf("vdrive: write block=%d to unit:%d\n", block, command >> 2);
-        for (crc_out = i = 0; i < 512; i++)
-        {
-            read(afd, &block_buff[i], 1);
-            crc_out ^= block_buff[i];
-        }
-        if (vfd)
-        {
-            lseek(vfd, block * 512, 0);
-            read(afd, &crc_in, 1);
-        }
-        if (crc_in == crc_out)
-            write(vfd, block_buff, 512);
-        block_buff[0] = 0xC5;
-        block_buff[1] = command;
-        block_buff[2] = block;
-        block_buff[3] = block >> 8;        
-        block_buff[4] = crc_out;        
-        write(afd, block_buff, 5);
+        lseek(vfd, block * 512, 0);
+        if (read(vfd, block_buff, 512) != 512)
+            err = 0x27; /* ProDOS I/O error */
     }
     else
-        state = RESET; // ??? What else to do ???
+        err = 0x28; /* ProDOS No device connected error */
+    write(afd, block_buff, 512);
+    return err;
+}
+int vdrvwrite(int afd, int drive, int block)
+{
+    int i, err = 0, vfd = vdrvfd[drive];
+    unsigned char block_buff[512];
+
+    for (i = 0; i < 512; i++)
+        read(afd, &block_buff[i], 1);
+    if (vfd)
+    {
+        lseek(vfd, block * 512, 0);
+        if (write(vfd, block_buff, 512) != 512)
+            err = 0x27; /* ProDOS I/O error */
+    }
+    else
+        err = 0x28; /* ProDOS No device connected error */
+    return err;
 }
 /*****************************************************************\
 *                                                                 *
@@ -722,12 +711,12 @@ void main(int argc, char **argv)
     struct uinput_user_dev uidev;
     struct termios oldtio,newtio;
     unsigned char iopkt[16];
-    int i, c, rdycnt, vdriveactive;
+    int i, c, rdycnt, vdrvactive;
     int a2fd, kbdfd, moufd, srvfd, maxfd;
     struct sockaddr_in servaddr;
     fd_set readset, openset;
     char *devtty = "/dev/ttyAMA0"; /* default for Raspberry Pi */
-    char *vdrivedir = "/usr/share/a2pi/"; /* default VDRIVE image directory */
+    char *vdrvdir = "/usr/share/a2pi/"; /* default vdrv image directory */
     
     /*
      * Parse arguments
@@ -851,9 +840,16 @@ void main(int argc, char **argv)
     evrely.code = REL_Y;
     evsync.type = EV_SYN;
     /*
-     * Get VDRIVE images.
+     * Get vdrv images.
      */
-    vdriveactive = vdriveopen(vdrivedir);
+    vdrvactive = vdrvopen(vdrvdir);
+#if defined(SETSERCLK) && defined(__ARMEL__)
+    /*
+     * Initialize ACIA clock for Apple II Pi card
+     */
+    gpclk(271); /* divisor for ~1.8 MHz => (500/271) MHz */
+    sleep(1);   /* give clock chance to settle down */
+#endif
     /*
      * Open socket.
      */
@@ -869,13 +865,6 @@ void main(int argc, char **argv)
         die("error: bind socket");
     if (listen(srvfd, MAX_CLIENT - 1) < 0)
         die("error: listen socket");
-#if defined(SETSERCLK) && defined(__ARMEL__)
-    /*
-     * Initialize ACIA clock for Apple II Pi card
-     */
-    gpclk(271); /* divisor for ~1.8 MHz => (500/271) MHz */
-    sleep(1);   /* give clock chance to settle down */
-#endif
     /*
      * Open serial port.
      */
@@ -1092,22 +1081,48 @@ reset:
                             else
                                 state = RESET;
                             break;                            
-                        case 0xC5: /* virtual drive request */
-                            //printf("a2pid: vdrive request\n");
+                        case 0xA0: /* virtual drive 1 STATUS call */
+                        case 0xA2: /* virtual drive 2 STATUS call */
+                            //printf("vdrive: STATUS unit:%d\n", (iopkt[0] >> 1) & 0x01);
+                            iopkt[3] = iopkt[0] + 1; /* ack */
+                            write(a2fd, &iopkt[3], 1);
+                            iopkt[0] = vdrvstatus((iopkt[0] >> 1) & 0x01);
+                            write(a2fd, iopkt, 1);                            
+                            if (a2reqlist) /* resend last request */
+                                write(a2fd, &(a2reqlist->type), 1);
+                            break;                    
+                        case 0xA4: /* virtual drive 1 READ call */
+                        case 0xA6: /* virtual drive 2 READ call */
+                            //printf("vdrive: READ unit:%d block:%d\n", (iopkt[0] >> 1) & 0x01, iopkt[1] | (iopkt[2] << 8));
+                            iopkt[3] = iopkt[0] + 1; /* ack */
+                            write(a2fd, &iopkt[3], 1);
+                            iopkt[0] = vdrvread(a2fd, (iopkt[0] >> 1) & 0x01, iopkt[1] | (iopkt[2] << 8));
+                            write(a2fd, iopkt, 1);                            
+                            if (a2reqlist) /* resend last request */
+                                write(a2fd, &(a2reqlist->type), 1);
+                            break;
+                        case 0xA8: /* virtual drive 1 WRITE call */
+                        case 0xAA: /* virtual drive 2 WRITE call */
+                            //printf("vdrive: WRITE unit:%d block:%d\n", (iopkt[0] >> 1) & 0x01, iopkt[1] | (iopkt[2] << 8));
+                            iopkt[3] = iopkt[0] + 1; /* ack */
+                            write(a2fd, &iopkt[3], 1);
                             newtio.c_cc[VMIN] = 1; /* blocking read until command packet received */
                             tcsetattr(a2fd, TCSANOW, &newtio);
-                            if (read(a2fd, &iopkt[3], 1) + read(a2fd, &iopkt[4], 1) == 2)
-                            {
-                                //printf("vdrive cmd:%02X blk:%d crc:%02X\n", iopkt[1], iopkt[2] | (iopkt[3] << 8), iopkt[4]);
-                                vdrivecmd(a2fd, iopkt[1], iopkt[2] | (iopkt[3] << 8), iopkt[4]);
-                            }
-                            else
-                                state = RESET;
+                            iopkt[0] = vdrvwrite(a2fd, (iopkt[0] >> 1) & 0x01, iopkt[1] | (iopkt[2] << 8));
+                            write(a2fd, iopkt, 1);                            
                             newtio.c_cc[VMIN]  = 3; /* blocking read until 3 chars received */
                             tcsetattr(a2fd, TCSANOW, &newtio);
                             if (a2reqlist) /* resend last request */
-                                write(a2fd, &a2reqlist->type, 1);
+                                write(a2fd, &(a2reqlist->type), 1);
                             break;
+                        case 0xAC: /* virtual clock TIME call */
+                            //printf("vclock: TIME\n");
+                            iopkt[3] = 0xAD; /* ack */
+                            write(a2fd, &iopkt[3], 1);
+                            write(a2fd, prodos_time(), 4);
+                            if (a2reqlist) /* resend last request */
+                                write(a2fd, &(a2reqlist->type), 1);
+                            break;                            
                         default:
                             prlog("a2pid: Unknown Event\n");
                             tcflush(a2fd, TCIFLUSH);
@@ -1217,15 +1232,15 @@ reset:
                             case 0x98: /* get output chars from Apple II */
                                 a2client[i].flags |= CLIENT_COUT;
                                 break;
-                            case 0xC0: /* reconnect VDRIVEs */
-                                vdriveclose();
-                                vdriveactive = vdriveopen(vdrivedir);
+                            case 0xC0: /* reconnect vdrvs */
+                                vdrvclose();
+                                vdrvactive = vdrvopen(vdrvdir);
                                 iopkt[0]++; /* ack */
                                 write(a2client[i].fd, iopkt, 1);
                                 break;
-                            case 0xC2: /* disconnect VDRIVEs */
-                                vdriveclose();
-                                vdriveactive = 0;
+                            case 0xC2: /* disconnect vdrvs */
+                                vdrvclose();
+                                vdrvactive = 0;
                                 iopkt[0]++; /* ack */
                                 write(a2client[i].fd, iopkt, 1);
                                 break;
@@ -1259,7 +1274,7 @@ reset:
             close(a2client[i].fd);
     if (state == RESET)
         goto reset;
-    vdriveclose();
+    vdrvclose();
     shutdown(srvfd, SHUT_RDWR);
     close(srvfd);
     tcsetattr(a2fd, TCSANOW, &oldtio);
