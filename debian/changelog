@@ -2,6 +2,8 @@ a2pi (0.1.8-2) unstable; urgency=low
 
   * Fix FUSE create file function
   * Add VSDRIVE functionality
+  * Fix recursive call request (FUSE mount w/ pidrive active)
+  * Fix symlinks for A2VDx.PO updating
 
  -- David Schmenk <dschmenk@gmail.com>  Tue, 04 Feb 2014 13:43:53 -0800
 

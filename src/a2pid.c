@@ -33,7 +33,7 @@
  * Apple II request entry
  */
 #define MAX_XFER        64
-
+#define AWAIT_COMPLETE	0x100
 struct a2request {
     int  idx;
     int  type;
@@ -1037,6 +1037,7 @@ reset:
                                     state = RESET;
                                 newtio.c_cc[VMIN]  = 3; /* blocking read until 3 chars received */
                                 tcsetattr(a2fd, TCSANOW, &newtio);
+                                a2reqlist->type |= AWAIT_COMPLETE;
                             }
                             else
                                 state = RESET;
@@ -1088,7 +1089,7 @@ reset:
                             write(a2fd, &iopkt[3], 1);
                             iopkt[0] = vdrvstatus((iopkt[0] >> 1) & 0x01);
                             write(a2fd, iopkt, 1);                            
-                            if (a2reqlist) /* resend last request */
+                            if (a2reqlist && !(a2reqlist->type & AWAIT_COMPLETE)) /* resend last request */
                                 write(a2fd, &(a2reqlist->type), 1);
                             break;                    
                         case 0xA4: /* virtual drive 1 READ call */
@@ -1097,8 +1098,8 @@ reset:
                             iopkt[3] = iopkt[0] + 1; /* ack */
                             write(a2fd, &iopkt[3], 1);
                             iopkt[0] = vdrvread(a2fd, (iopkt[0] >> 1) & 0x01, iopkt[1] | (iopkt[2] << 8));
-                            write(a2fd, iopkt, 1);                            
-                            if (a2reqlist) /* resend last request */
+                            write(a2fd, iopkt, 1);
+                            if (a2reqlist && !(a2reqlist->type & AWAIT_COMPLETE)) /* resend last request */
                                 write(a2fd, &(a2reqlist->type), 1);
                             break;
                         case 0xA8: /* virtual drive 1 WRITE call */
@@ -1112,7 +1113,7 @@ reset:
                             write(a2fd, iopkt, 1);                            
                             newtio.c_cc[VMIN]  = 3; /* blocking read until 3 chars received */
                             tcsetattr(a2fd, TCSANOW, &newtio);
-                            if (a2reqlist) /* resend last request */
+                            if (a2reqlist && !(a2reqlist->type & AWAIT_COMPLETE)) /* resend last request */
                                 write(a2fd, &(a2reqlist->type), 1);
                             break;
                         case 0xAC: /* virtual clock TIME call */
@@ -1120,7 +1121,7 @@ reset:
                             iopkt[3] = 0xAD; /* ack */
                             write(a2fd, &iopkt[3], 1);
                             write(a2fd, prodos_time(), 4);
-                            if (a2reqlist) /* resend last request */
+                            if (a2reqlist && !(a2reqlist->type & AWAIT_COMPLETE)) /* resend last request */
                                 write(a2fd, &(a2reqlist->type), 1);
                             break;                            
                         default:

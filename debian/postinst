@@ -58,12 +58,18 @@ case "$1" in
 	    sed 's/^#user_allow_other/user_allow_other/' /etc/fuse.conf.bak > /etc/fuse.conf
 	fi
 	#
-	# Set up VSDRIVEs
+	# Set up PIDRIVEs
 	#
-	if [ ! -e /usr/share/a2pi/A2VD1.PO ] ; then
+	if [ ! -s /usr/share/a2pi/A2VD1.PO ] ; then
+	    if [ -e /usr/share/a2pi/A2VD1.PO ] || [ -L /usr/share/a2pi/A2VD1.PO ] ;then 
+		rm /usr/share/a2pi/A2VD1.PO
+	    fi
 	    ln -s /usr/share/a2pi/A2PI-1.4.PO /usr/share/a2pi/A2VD1.PO
 	fi
-	if [ ! -e /usr/share/a2pi/A2VD2.PO ] ; then
+	if [ ! -s /usr/share/a2pi/A2VD2.PO ] ; then
+	    if [ -e /usr/share/a2pi/A2VD2.PO ] || [ -L /usrshare/a2pi/A2VD2.PO ] ; then
+		 rm /usr/share/a2pi/A2VD2.PO
+	    fi
 	    ln -s /usr/share/a2pi/BLANK.PO /usr/share/a2pi/A2VD2.PO
 	fi
 	#
