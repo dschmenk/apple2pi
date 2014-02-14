@@ -1,31 +1,29 @@
 #include "a2lib.c"
 
 char online[] = {
-// ORG $300
+// ORG $301
     0x20, 0x00, 0xBF, // JSR $BF00 (PRODOS)
     0xC5,             // DB ON_LINE
     0x08, 0x03,       // DW PARAMS
     0x60,             // RTS
-    0xEA,
 // PARAMS @ $308
     0x02,             // PARAM_COUNT
     0x60,             // UNIT_NUM = DRIVE 0, SLOT 6
     0x00, 0x20        // DATA_BUFFER = $2000
 };        
 char writeblk[] = {
-// ORG $300
+// ORG $301
     0x20, 0x00, 0xBF, // JSR $BF00 (PRODOS)
     0x81,             // DB WRITE_BLOCK
     0x08, 0x03,       // DW PARAMS
     0x60,             // RTS
-    0xEA,
 // PARAMS @ $308
     0x03,             // PARAM_COUNT
     0x60,             // UNIT_NUM = DRIVE 0, SLOT 6
     0x00, 0x20,       // DATA_BUFFER = $2000
     0x00, 0x00        // BLOCK_NUM
 };
-#define ORG             0x0300
+#define ORG             0x0301
 #define BLOCK_NUM       0x030C
 #define DATA_BUFFER     0x2000
 char dsk[280][512];

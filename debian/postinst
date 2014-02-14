@@ -70,7 +70,7 @@ case "$1" in
 	    if [ -e /usr/share/a2pi/A2VD2.PO ] || [ -L /usrshare/a2pi/A2VD2.PO ] ; then
 		 rm /usr/share/a2pi/A2VD2.PO
 	    fi
-	    ln -s /usr/share/a2pi/BLANK.PO /usr/share/a2pi/A2VD2.PO
+	    ln -s /usr/share/a2pi/UTILS.PO /usr/share/a2pi/A2VD2.PO
 	fi
 	#
 	# Add schmenk.is-a-geek.com to apt sources

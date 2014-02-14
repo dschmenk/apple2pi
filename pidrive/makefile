@@ -11,6 +11,9 @@ BINTYPE	= \#060000
 SYSTYPE	= \#ff0000
 TXTTYPE	= \#040000
 
+clean:
+	-rm $(ROM) $(VDRV) $(VCLK) *.o *~
+
 all: $(ROM) $(VDRV) $(VCLK)
 
 $(ROM): rom.s

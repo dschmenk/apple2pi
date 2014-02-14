@@ -1,4 +1,4 @@
- /*
+/*
  * Copyright 2013, David Schmenk
  */
 #include "a2lib.c"
@@ -13,6 +13,8 @@ struct timespec tv;
 struct input_event evkey, evrelx, evrely, evsync;
 #define PEN_UP		0
 #define PEN_DOWN	1
+#define	PEN_SCALE	3
+#define	PEN_NOISE	127
 #define	BTTN_IO		0xC061
 #define	READGP0		0x320
 #define	READGP1		0x328
@@ -23,7 +25,6 @@ char readgp[] = {
     0x98,             // TYA
     0x60,             // RTS
 };
-int accel[20] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 3, 3, 4, 5, 7, 9, 10};
 /*
  * Error handling.
  */
@@ -41,7 +42,7 @@ static void sig_bye(int signo)
 void main(int argc, char **argv)
 {
     struct uinput_user_dev uidev;
-    int a2fd, joyfd, relx, rely, pen, upx, upy, cntrx, cntry, gptoggle;
+    int a2fd, joyfd, relx, rely, pen, upx, upy, downx, downy, cntrx, cntry, gptoggle;
     unsigned char prevbttns[2], bttns[2];
     
     int pifd = a2open("127.0.0.1");
@@ -128,6 +129,8 @@ void main(int argc, char **argv)
     a2quickcall(pifd, READGP0, &upx);
     a2read(pifd, BTTN_IO, 2, prevbttns);
     a2quickcall(pifd, READGP1, &upy);
+    upx         += 2;
+    upy         += 2;
     gptoggle     = 0;
     pen          = PEN_UP;
     evrelx.value = 0;
@@ -141,7 +144,7 @@ void main(int argc, char **argv)
 	if (gptoggle)
 	{
 	    a2quickcall(pifd, READGP0, &relx);
-	    if (relx == upx && rely == upy)
+	    if (relx <= upx || rely <= upy)
 	    {
 		if (pen == PEN_DOWN)
 		{
@@ -150,22 +153,37 @@ void main(int argc, char **argv)
 		    write(joyfd, &evrelx, sizeof(evrelx));
 		    write(joyfd, &evrely, sizeof(evrely));
 		    write(joyfd, &evsync, sizeof(evsync));
+                    if (downx == cntrx && downy == cntry)
+                    {
+                        evkey.code  = BTN_LEFT;
+                        evkey.value = 1;
+                        write(joyfd, &evkey, sizeof(evkey));
+                        write(joyfd, &evsync, sizeof(evsync));
+                        evkey.value = 0;
+                        write(joyfd, &evkey, sizeof(evkey));
+                        write(joyfd, &evsync, sizeof(evsync));
+                    }
 		}
 		pen = PEN_UP;
 	    }
-	    else if (pen == PEN_UP && (relx != upx && rely != upy))
+	    else if (pen == PEN_UP && (relx > upx && rely > upy))
 	    {
 		pen   = PEN_DOWN;
-		cntrx = relx;
-		cntry = rely;
+		downx = cntrx = relx;
+		downy = cntry = rely;
 	    }
 	    if (pen == PEN_DOWN)
 	    {
-		evrelx.value = (relx - cntrx);
-		evrely.value = (rely - cntry);
-		write(joyfd, &evrelx, sizeof(evrelx));
-		write(joyfd, &evrely, sizeof(evrely));
-		write(joyfd, &evsync, sizeof(evsync));
+                if (abs(relx - cntrx) < PEN_NOISE && abs(rely - cntry) < PEN_NOISE)
+                {
+                    evrelx.value = (relx - cntrx) * PEN_SCALE;
+                    evrely.value = (rely - cntry) * PEN_SCALE;
+                    write(joyfd, &evrelx, sizeof(evrelx));
+                    write(joyfd, &evrely, sizeof(evrely));
+                    write(joyfd, &evsync, sizeof(evsync));
+                    cntrx = relx;
+                    cntry = rely;
+                }
 	    }
 	    if (isdebug) fprintf(stderr, "a2joypad (%d, %d) [%d %d] pen=%d\n", relx, rely, bttns[0] >> 7, bttns[1] >> 7, pen);
 	}
