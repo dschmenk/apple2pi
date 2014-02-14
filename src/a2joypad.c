@@ -14,7 +14,7 @@ struct input_event evkey, evrelx, evrely, evsync;
 #define PEN_UP		0
 #define PEN_DOWN	1
 #define	PEN_SCALE	3
-#define	PEN_NOISE	127
+#define	PEN_NOISE	96
 #define	BTTN_IO		0xC061
 #define	READGP0		0x320
 #define	READGP1		0x328
@@ -181,9 +181,9 @@ void main(int argc, char **argv)
                     write(joyfd, &evrelx, sizeof(evrelx));
                     write(joyfd, &evrely, sizeof(evrely));
                     write(joyfd, &evsync, sizeof(evsync));
-                    cntrx = relx;
-                    cntry = rely;
                 }
+                cntrx = relx;
+                cntry = rely;
 	    }
 	    if (isdebug) fprintf(stderr, "a2joypad (%d, %d) [%d %d] pen=%d\n", relx, rely, bttns[0] >> 7, bttns[1] >> 7, pen);
 	}

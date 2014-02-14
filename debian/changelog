@@ -1,10 +1,11 @@
-a2pi (0.1.8-3) unstable; urgency=low
+a2pi (0.1.8-4) unstable; urgency=low
 
   * Fix FUSE create file function
   * Add VSDRIVE functionality
   * Fix recursive call request (FUSE mount w/ pidrive active)
   * Fix symlinks for A2VDx.PO updating
   * Add UTILS.PO image for comms programs and file manipulation
+  * Run PIDRIVE from STARTUP:wq
 
  -- David Schmenk <dschmenk@gmail.com>  Tue, 13 Feb 2014 15:31:23 -0800
 
