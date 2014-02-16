@@ -124,10 +124,10 @@ unsigned char *prodos_time(void)
      */
     time_t now = time(NULL);
     struct tm *tm = localtime(&now);
-    int ptime =   (tm->tm_mday        & 0x1F) 
-              | (((tm->tm_mon  + 1)   & 0x0F) << 5) 
+    int ptime =   (tm->tm_mday        & 0x1F)
+              | (((tm->tm_mon  + 1)   & 0x0F) << 5)
               | (((tm->tm_year - 100) & 0x7F) << 9)
-              |  ((tm->tm_min         & 0x3F) << 16) 
+              |  ((tm->tm_min         & 0x3F) << 16)
               |  ((tm->tm_hour        & 0x1F) << 24);
     time_buff[0] = (unsigned char) ptime;
     time_buff[1] = (unsigned char) (ptime >> 8);
@@ -225,7 +225,7 @@ void sendkeycodeup(int fd, int code)
     {
         evkey.code  = KEY_LEFTCTRL;
         write(fd, &evkey, sizeof(evkey));
-    }        
+    }
     if (code & MOD_ALT)
     {
         evkey.code  = KEY_LEFTALT;
@@ -237,7 +237,7 @@ static int prevkeycode = -1;
 void sendkey(int fd, int mod, int key)
 {
     int code = keycode[(mod & MOD_FN) | (key & KEY_ASCII)] | ((mod << 8) & MOD_ALT);
-    
+
     if (prevkeycode >= 0)
     {
         sendkeycodeup(fd, prevkeycode);
@@ -267,10 +267,10 @@ void sendkey(int fd, int mod, int key)
 void sendbttn(int fd, int mod, int bttn)
 {
     static int lastbtn = 0;
-    
+
     if (bttn)
     {
-        lastbtn = evkey.code = (mod == 0) ? BTN_LEFT 
+        lastbtn = evkey.code = (mod == 0) ? BTN_LEFT
                                           : (mod & 0x40) ? BTN_RIGHT
                                                          : BTN_MIDDLE;
         evkey.value = 1;
@@ -287,7 +287,7 @@ void sendrelxy(int fd, int x, int y)
 {
 #if 0
     static int accel[32] = { 0,  1,  4,  8,  9,  10,  11,  12, 13, 14, 15, 16, 17, 18, 19, 20,
-        -21, -20, -19, -18, -17, -16, -15, -14, -13, -12, -11, -10, -9, -8, -4, -1}; 
+        -21, -20, -19, -18, -17, -16, -15, -14, -13, -12, -11, -10, -9, -8, -4, -1};
     x = ((x > 4) || (x < -4)) ? x * 2 : accel[x & 0x1F];
     y = ((y > 4) || (y < -4)) ? y * 2 : accel[y & 0x1F];
 #else
@@ -308,7 +308,7 @@ void sendrelxy(int fd, int x, int y)
 int writeword(int fd, int word, char ack)
 {
     char rwchar;
-    
+
     rwchar = word;  /* send low byte of word */
     write(fd, &rwchar, 1);
     if ((read(fd, &rwchar, 1) == 1) && (rwchar == ack))      /* receive ack */
@@ -456,7 +456,7 @@ void main(int argc, char **argv)
     fd_set readset, openset;
     char *devtty = "/dev/ttyAMA0"; /* default for Raspberry Pi */
     char *vdrvdir = "/usr/share/a2pi/"; /* default vdrv image directory */
-    
+
     /*
      * Parse arguments
      */
@@ -504,7 +504,7 @@ void main(int argc, char **argv)
         die("error: uinput ioctl EV_REP");
     for (i = KEY_ESC; i <= KEY_F10; i++)
         if (ioctl(kbdfd, UI_SET_KEYBIT, i) < 0)
-            die("error: uinput ioctl SET_KEYBITs");        
+            die("error: uinput ioctl SET_KEYBITs");
     for (i = KEY_HOME; i <= KEY_DELETE; i++)
         if (ioctl(kbdfd, UI_SET_KEYBIT, i) < 0)
             die("error: uinput ioctl SET_KEYBITs");
@@ -590,21 +590,6 @@ void main(int argc, char **argv)
     sleep(1);   /* give clock chance to settle down */
 #endif
     /*
-     * Open socket.
-     */
-    prlog("a2pid: Open server socket\n");
-    bzero(&servaddr, sizeof(servaddr));
-    servaddr.sin_family      = AF_INET;
-    servaddr.sin_port        = htons(6551);
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    srvfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (srvfd < 0)
-        die("error: socket create");
-    if (bind(srvfd,(struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
-        die("error: bind socket");
-    if (listen(srvfd, MAX_CLIENT - 1) < 0)
-        die("error: listen socket");
-    /*
      * Open serial port.
      */
     prlog("a2pid: Open serial port\n");
@@ -623,7 +608,7 @@ void main(int argc, char **argv)
     tcsetattr(a2fd, TCSANOW, &newtio);
     prlog("a2pid: Waiting to connect to Apple II...\n");
     iopkt[0] = 0x80;  /* request re-sync if Apple II already running */
-    write(a2fd, iopkt, 1);        
+    write(a2fd, iopkt, 1);
     if (read(a2fd, iopkt, 1) == 1)
     {
         if (iopkt[0] == 0x80)   /* receive sync */
@@ -645,6 +630,21 @@ void main(int argc, char **argv)
     }
     newtio.c_cc[VMIN] = 3; /* blocking read until 3 chars received */
     tcsetattr(a2fd, TCSANOW, &newtio);
+    /*
+     * Open socket.
+     */
+    prlog("a2pid: Open server socket\n");
+    bzero(&servaddr, sizeof(servaddr));
+    servaddr.sin_family      = AF_INET;
+    servaddr.sin_port        = htons(6551);
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    srvfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (srvfd < 0)
+        die("error: socket create");
+    if (bind(srvfd,(struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+        die("error: bind socket");
+    if (listen(srvfd, MAX_CLIENT - 1) < 0)
+        die("error: listen socket");
     /*
      * Come basck here on RESET.
      */
@@ -691,7 +691,7 @@ reset:
                             write(a2fd, iopkt, 1);
                             tcflush(a2fd, TCIFLUSH);
                             flushreqs(a2fd, 0, -1, -1);
-                            break;                                
+                            break;
                         case 0x82: /* keyboard event */
                             // printf("Keyboard Event: 0x%02X:%c\n", iopkt[1], iopkt[2] & 0x7F);
                             sendkey(kbdfd, iopkt[1], iopkt[2]);
@@ -791,6 +791,7 @@ reset:
                                     state = RESET;
                                 newtio.c_cc[VMIN]  = 3; /* blocking read until 3 chars received */
                                 tcsetattr(a2fd, TCSANOW, &newtio);
+                                a2reqlist->type |= AWAIT_COMPLETE;
                             }
                             else
                                 state = RESET;
@@ -799,7 +800,7 @@ reset:
                             for (i = 0; i < MAX_CLIENT; i++)
                                 if (a2client[i].flags & CLIENT_COUT)
                                     write(a2client[i].fd, iopkt, 2);
-                            
+
                             break;
                         case 0x9E: /* request complete ok */
                         case 0x9F: /* request complete error */
@@ -820,17 +821,21 @@ reset:
                             }
                             else
                                 state = RESET;
-                            break;                            
+                            break;
                         case 0xA0: /* virtual drive 1 STATUS call */
                         case 0xA2: /* virtual drive 2 STATUS call */
                             //printf("vdrive: STATUS unit:%d\n", (iopkt[0] >> 1) & 0x01);
                             iopkt[3] = iopkt[0] + 1; /* ack */
                             write(a2fd, &iopkt[3], 1);
                             iopkt[0] = vdrvstatus((iopkt[0] >> 1) & 0x01);
-                            write(a2fd, iopkt, 1);                            
+                            write(a2fd, iopkt, 1);
                             if (a2reqlist && !(a2reqlist->type & AWAIT_COMPLETE)) /* resend last request */
-                                write(a2fd, &(a2reqlist->type), 1);
-                            break;                    
+                            {
+                                iopkt[0] = a2reqlist->type;
+                                write(a2fd, iopkt, 1);
+				printf("vdrive: status resend request %04X\n", a2reqlist->type);
+                            }
+                            break;
                         case 0xA4: /* virtual drive 1 READ call */
                         case 0xA6: /* virtual drive 2 READ call */
                             //printf("vdrive: READ unit:%d block:%d\n", (iopkt[0] >> 1) & 0x01, iopkt[1] | (iopkt[2] << 8));
@@ -839,7 +844,11 @@ reset:
                             iopkt[0] = vdrvread(a2fd, (iopkt[0] >> 1) & 0x01, iopkt[1] | (iopkt[2] << 8));
                             write(a2fd, iopkt, 1);
                             if (a2reqlist && !(a2reqlist->type & AWAIT_COMPLETE)) /* resend last request */
-                                write(a2fd, &(a2reqlist->type), 1);
+                            {
+                                iopkt[0] = a2reqlist->type;
+                                write(a2fd, iopkt, 1);
+				printf("vdrive: read resend request %04X\n", a2reqlist->type);
+                            }
                             break;
                         case 0xA8: /* virtual drive 1 WRITE call */
                         case 0xAA: /* virtual drive 2 WRITE call */
@@ -849,20 +858,28 @@ reset:
                             newtio.c_cc[VMIN] = 1; /* blocking read until command packet received */
                             tcsetattr(a2fd, TCSANOW, &newtio);
                             iopkt[0] = vdrvwrite(a2fd, (iopkt[0] >> 1) & 0x01, iopkt[1] | (iopkt[2] << 8));
-                            write(a2fd, iopkt, 1);                            
+                            write(a2fd, iopkt, 1);
                             newtio.c_cc[VMIN]  = 3; /* blocking read until 3 chars received */
                             tcsetattr(a2fd, TCSANOW, &newtio);
                             if (a2reqlist && !(a2reqlist->type & AWAIT_COMPLETE)) /* resend last request */
-                                write(a2fd, &(a2reqlist->type), 1);
+                            {
+                                iopkt[0] = a2reqlist->type;
+                                write(a2fd, iopkt, 1);
+				printf("vdrive: write resend request %04X\n", a2reqlist->type);
+                            }
                             break;
                         case 0xAC: /* virtual clock TIME call */
                             //printf("vclock: TIME\n");
-                            iopkt[3] = 0xAD; /* ack */
-                            write(a2fd, &iopkt[3], 1);
+                            iopkt[0] = 0xAD; /* ack */
+                            write(a2fd, iopkt, 1);
                             write(a2fd, prodos_time(), 4);
                             if (a2reqlist && !(a2reqlist->type & AWAIT_COMPLETE)) /* resend last request */
-                                write(a2fd, &(a2reqlist->type), 1);
-                            break;                            
+                            {
+                                iopkt[0] = a2reqlist->type;
+                                write(a2fd, iopkt, 1);
+				printf("vclock: resend request %04X\n", a2reqlist->type);
+                            }
+                            break;
                         default:
                             prlog("a2pid: Unknown Event\n");
                             tcflush(a2fd, TCIFLUSH);

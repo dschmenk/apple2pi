@@ -1,3 +1,9 @@
+a2pi (0.1.8-5) unstable; urgency=low
+
+  * Stabilize request/pidrive interaction
+
+ -- David Schmenk <dschmenk@gmail.com>  Sat, 15 Feb 2014 13:15:00 -0800
+
 a2pi (0.1.8-4) unstable; urgency=low
 
   * Fix FUSE create file function
@@ -5,7 +11,7 @@ a2pi (0.1.8-4) unstable; urgency=low
   * Fix recursive call request (FUSE mount w/ pidrive active)
   * Fix symlinks for A2VDx.PO updating
   * Add UTILS.PO image for comms programs and file manipulation
-  * Run PIDRIVE from STARTUP:wq
+  * Run PIDRIVE from STARTUP
 
  -- David Schmenk <dschmenk@gmail.com>  Tue, 13 Feb 2014 15:31:23 -0800
 
