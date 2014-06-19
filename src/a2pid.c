@@ -17,6 +17,7 @@
 #include <linux/input.h>
 #include <linux/uinput.h>
 
+char deftty[] = "/dev/ttyAMA0"; /* Default for Raspberry Pi */
 #if defined(SETSERCLK) && defined(__ARMEL__)
 #include "gpclk.c"
 #endif
@@ -301,7 +302,7 @@ void sendrelxy(int fd, int x, int y)
     write(fd, &evsync, sizeof(evsync));
 }
 /*****************************************************************\
-*                                                                 *
+ *                                                                 *
 *                    Request queue management                     *
 *                                                                 *
 \*****************************************************************/
@@ -454,7 +455,7 @@ void main(int argc, char **argv)
     int a2fd, kbdfd, moufd, srvfd, maxfd;
     struct sockaddr_in servaddr;
     fd_set readset, openset;
-    char *devtty = "/dev/ttyAMA0"; /* default for Raspberry Pi */
+    char *devtty  = deftty;
     char *vdrvdir = "/usr/share/a2pi/"; /* default vdrv image directory */
 
     /*
@@ -586,8 +587,11 @@ void main(int argc, char **argv)
     /*
      * Initialize ACIA clock for Apple II Pi card
      */
-    gpclk(271); /* divisor for ~1.8 MHz => (500/271) MHz */
-    sleep(1);   /* give clock chance to settle down */
+    if (devtty == deftty)
+    {
+        gpclk(271); /* divisor for ~1.8 MHz => (500/271) MHz */
+        sleep(1);   /* give clock chance to settle down */
+    }
 #endif
     /*
      * Open serial port.
@@ -605,6 +609,8 @@ void main(int argc, char **argv)
     newtio.c_lflag     = 0; /* set input mode (non-canonical, no echo,...) */
     newtio.c_cc[VTIME] = 0; /* inter-character timer unused */
     newtio.c_cc[VMIN]  = 1; /* blocking read until 1 char received */
+    cfsetispeed(&newtio, B115200);
+    cfsetospeed(&newtio, B115200);
     tcsetattr(a2fd, TCSANOW, &newtio);
     prlog("a2pid: Waiting to connect to Apple II...\n");
     iopkt[0] = 0x80;  /* request re-sync if Apple II already running */
