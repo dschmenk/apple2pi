@@ -1,3 +1,10 @@
+a2pi (0.1.8-7) unstable; urgency=low
+
+  * Only set GPCLK when using default RPi UART
+  * Add a2pi logo with transparent background
+
+ -- David Schmenk <dschmenk@gmail.com>  Sat, 07 Jul 2014 12:46:00 -0800
+
 a2pi (0.1.8-6) unstable; urgency=low
 
   * Stabilize request/pidrive interaction
