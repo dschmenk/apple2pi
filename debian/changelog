@@ -1,15 +1,8 @@
-a2pi (0.1.8-7) unstable; urgency=low
-<<<<<<< HEAD
+a2pi (0.1.8-8) unstable; urgency=low
 =======
 
-  * Only set GPCLK when using default RPi UART
+  * Full ROM build
   * Add a2pi logo with transparent background
-
- -- David Schmenk <dschmenk@gmail.com>  Sat, 07 Jul 2014 12:46:00 -0800
-
-a2pi (0.1.8-6) unstable; urgency=low
->>>>>>> 73345729f9cba82fa6ecf52054c6c442f7e315c8
-
   * Only set GPCLK on default RPi UART
   * Stabilize request/pidrive interaction
   * Fix cancel from client connect & PIDRIVE
