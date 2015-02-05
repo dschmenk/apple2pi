@@ -140,8 +140,18 @@ int vdrvtime(int afd)
 {
     return write(afd, prodos_time(), 4);
 }
-int vdrvstatus(int drive)
+int vdrvstat(int afd, int drive)
 {
+    struct stat vstat;
+    unsigned char size_buff[2];
+    
+    if (vdrvfd[drive])
+        fstat(vdrvfd[drive], &vstat);
+    else
+        vstat.st_size = 0;
+    size_buff[0] = vstat.st_size >> 9;
+    size_buff[1] = vstat.st_size >> 17;
+    write(afd, size_buff, 2);
     return vdrvfd[drive] == 0 ? 0x28 : 0x00;
 }
 int vdrvread(int afd, int drive, int block)
@@ -833,7 +843,7 @@ reset:
                             //printf("vdrive: STATUS unit:%d\n", (iopkt[0] >> 1) & 0x01);
                             iopkt[3] = iopkt[0] + 1; /* ack */
                             write(a2fd, &iopkt[3], 1);
-                            iopkt[0] = vdrvstatus((iopkt[0] >> 1) & 0x01);
+                            iopkt[0] = vdrvstat(a2fd, (iopkt[0] >> 1) & 0x01);
                             write(a2fd, iopkt, 1);
                             if (a2reqlist && !(a2reqlist->type & AWAIT_COMPLETE)) /* resend last request */
                             {
