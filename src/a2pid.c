@@ -849,7 +849,7 @@ reset:
                             {
                                 iopkt[0] = a2reqlist->type;
                                 write(a2fd, iopkt, 1);
-				printf("vdrive: status resend request %04X\n", a2reqlist->type);
+				//printf("vdrive: status resend request %04X\n", a2reqlist->type);
                             }
                             break;
                         case 0xA4: /* virtual drive 1 READ call */
@@ -863,7 +863,7 @@ reset:
                             {
                                 iopkt[0] = a2reqlist->type;
                                 write(a2fd, iopkt, 1);
-				printf("vdrive: read resend request %04X\n", a2reqlist->type);
+				//printf("vdrive: read resend request %04X\n", a2reqlist->type);
                             }
                             break;
                         case 0xA8: /* virtual drive 1 WRITE call */
@@ -881,7 +881,7 @@ reset:
                             {
                                 iopkt[0] = a2reqlist->type;
                                 write(a2fd, iopkt, 1);
-				printf("vdrive: write resend request %04X\n", a2reqlist->type);
+				//printf("vdrive: write resend request %04X\n", a2reqlist->type);
                             }
                             break;
                         case 0xAC: /* virtual clock TIME call */
@@ -893,7 +893,7 @@ reset:
                             {
                                 iopkt[0] = a2reqlist->type;
                                 write(a2fd, iopkt, 1);
-				printf("vclock: resend request %04X\n", a2reqlist->type);
+				//printf("vclock: resend request %04X\n", a2reqlist->type);
                             }
                             break;
                         default:

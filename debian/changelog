@@ -1,3 +1,10 @@
+a2pi (0.2.0) unstable; urgency=low
+=======
+
+  * Add support for Raspberry Pi version 2
+
+ -- David Schmenk <dschmenk@gmail.com>  Sun, 22 Feb 2015 13:27:30 -0800
+
 a2pi (0.1.8-8) unstable; urgency=low
 =======
 

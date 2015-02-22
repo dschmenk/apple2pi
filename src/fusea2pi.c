@@ -661,6 +661,7 @@ static int prodos_map_errno(int perr)
     int uerr = 0;
     if (perr)
     {
+        prodos_close(0, 0); /* Close all files */
 	switch (perr) /* Map ProDOS error to unix errno */
 	{
 	    case -PRODOS_ERR_INVLD_PATH:
