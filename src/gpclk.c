@@ -12,24 +12,22 @@
 #include <unistd.h>
 
 // Access from ARM Running Linux
-#define BCM2708_PERI_BASE        0x7E000000
-#define ARM_PERI_BASE            0x20000000
+#define ARMv6_PERI_BASE          0x20000000
+#define ARMv7_PERI_BASE          0x3F000000
 #define GPIO_OFFSET              0x00200000
 #define CMGP_OFFSET              0x00101000
-#define GPIO_BASE                (ARM_PERI_BASE+GPIO_OFFSET) /* GPIO controller */
-#define CMGP_BASE                (ARM_PERI_BASE+CMGP_OFFSET) /* CM controller */
 
 // GPIO setup macros. Always use INP_GPIO(x) before using OUT_GPIO(x) or SET_GPIO_ALT(x,y)
 #define INP_GPIO(g) *(gpio+((g)/10)) &= ~(7<<(((g)%10)*3))
 #define OUT_GPIO(g) *(gpio+((g)/10)) |=  (1<<(((g)%10)*3))
 #define SET_GPIO_ALT(g,a) *(gpio+(((g)/10))) |= (((a)<=3?(a)+4:(a)==4?3:2)<<(((g)%10)*3))
 
-#define GPIO_REG(reg) (gpio[(reg-(BCM2708_PERI_BASE+GPIO_OFFSET))/4])
-#define CMGP_REG(reg) (cmgp[(reg-(BCM2708_PERI_BASE+CMGP_OFFSET))/4])
+#define GPIO_REG(reg) (gpio[(reg)/4])
+#define CMGP_REG(reg) (cmgp[(reg)/4])
 
-#define GPFSEL0 (0x7E200000)
-#define CM_GP0CTL (0x7E101070)
-#define CM_GP0DIV (0x7E101074)
+#define GPFSEL0		0x000
+#define CM_GP0CTL 	0x070
+#define CM_GP0DIV 	0x074
 
 #define IOMAP_LEN	4096
 //
@@ -72,10 +70,31 @@ void gpclk(int idiv)
     // I/O access
     volatile unsigned *gpio, *cmgp;
     int g,rep;
+    unsigned int arm_base = ARMv6_PERI_BASE; // Default to ARMv6 peripheral base
 
+    FILE *cpuinfo;
+    char keystr[256], valstr[128];
+
+    if ((cpuinfo = fopen("/proc/cpuinfo", "r") ) == NULL)
+    {
+	printf("can't open /proc/cpuinfo\n");
+	exit(-1);
+    }
+    while (!feof(cpuinfo))
+    {
+        if (fscanf(cpuinfo, "%s : %s\n", keystr, valstr) == 2)
+        {
+            if (strcmp(keystr, "Hardware") == 0 && strcmp(valstr, "BCM2709") == 0)
+            {
+                arm_base = ARMv7_PERI_BASE; // Pi version 2 (ARMv7)
+                break;
+            }
+        }
+    }       
+    fclose(cpuinfo);
     // Set up gpi pointer for direct register access
-    cmgp = setup_io(ARM_PERI_BASE + CMGP_OFFSET);
-    gpio = setup_io(ARM_PERI_BASE + GPIO_OFFSET);
+    cmgp = setup_io(arm_base + CMGP_OFFSET);
+    gpio = setup_io(arm_base + GPIO_OFFSET);
 
     // Set Clock Manager to 500 MHz source (PLLD)
     CMGP_REG(CM_GP0CTL) = (0x5A << 24) // Password
