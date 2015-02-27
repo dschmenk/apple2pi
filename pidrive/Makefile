@@ -1,6 +1,7 @@
 .SUFFIXES	=
 AFLAGS          = -o $@
-ROM = ROM\#062000
+SIROM = SIROM\#062000
+PIROM = PIROM\#062000
 VDRV = PIDRIVE\#062000
 VCLK = PICLOCK\#062000
 #
@@ -11,14 +12,18 @@ BINTYPE	= \#060000
 SYSTYPE	= \#ff0000
 TXTTYPE	= \#040000
 
-all: $(ROM) $(VDRV) $(VCLK)
+all: $(SIROM) $(PIROM) $(VDRV) $(VCLK)
 
 clean:
-	-rm $(ROM) $(VDRV) $(VCLK) *.o *~
+	-rm $(SIROM) $(PIROM) $(VDRV) $(VCLK) *.o *~
 
-$(ROM): rom.s
-	ca65 rom.s -o rom.o
-	ld65 -o $(ROM) -C rom.cfg rom.o
+$(SIROM): sirom.s romincs.s cxrom.s c8rom.s
+	ca65 sirom.s -o sirom.o
+	ld65 -o $(SIROM) -C sirom.cfg sirom.o
+
+$(PIROM): pirom.s romincs.s cxrom.s c8rom.s
+	ca65 pirom.s -o pirom.o
+	ld65 -o $(PIROM) -C pirom.cfg pirom.o
 
 $(VDRV): pidrive.s
 	ca65 pidrive.s -o pidrive.o

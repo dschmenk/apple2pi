@@ -41,8 +41,8 @@ volatile unsigned int *setup_io(int reg_base)
     // open /dev/mem
     if ((mem_fd = open("/dev/mem", O_RDWR|O_SYNC) ) < 0)
     {
-	printf("can't open /dev/mem \n");
-	exit(-1);
+        printf("can't open /dev/mem \n");
+        exit(-1);
     }
     // mmap IO
     io_map = mmap(NULL,             //Any adddress in our space will do
@@ -54,8 +54,8 @@ volatile unsigned int *setup_io(int reg_base)
     close(mem_fd); //No need to keep mem_fd open after mmap
     if (io_map == MAP_FAILED)
     {
-	printf("mmap error %d\n", (int)io_map);//errno also set!
-	exit(-1);
+        printf("mmap error %d\n", (int)io_map);//errno also set!
+        exit(-1);
     }
     return (volatile unsigned *)io_map;
 }
@@ -73,12 +73,12 @@ void gpclk(int idiv)
     unsigned int arm_base = ARMv6_PERI_BASE; // Default to ARMv6 peripheral base
 
     FILE *cpuinfo;
-    char keystr[256], valstr[128];
+    char keystr[1024], valstr[128];
 
     if ((cpuinfo = fopen("/proc/cpuinfo", "r") ) == NULL)
     {
-	printf("can't open /proc/cpuinfo\n");
-	exit(-1);
+        printf("can't open /proc/cpuinfo\n");
+        exit(-1);
     }
     while (!feof(cpuinfo))
     {
