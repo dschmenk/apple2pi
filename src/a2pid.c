@@ -598,10 +598,7 @@ void main(int argc, char **argv)
      * Initialize ACIA clock for Apple II Pi card
      */
     if (devtty == deftty)
-    {
         gpclk(271); /* divisor for ~1.8 MHz => (500/271) MHz */
-        //sleep(1);   /* give clock chance to settle down */
-    }
 #endif
     /*
      * Open serial port.
