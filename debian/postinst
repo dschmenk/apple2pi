@@ -64,7 +64,7 @@ case "$1" in
 	    if [ -e /usr/share/a2pi/A2VD1.PO ] || [ -L /usr/share/a2pi/A2VD1.PO ] ; then 
 		rm /usr/share/a2pi/A2VD1.PO
 	    fi
-	    ln -s /usr/share/a2pi/A2PI-1.5.PO /usr/share/a2pi/A2VD1.PO
+	    ln -s /usr/share/a2pi/A2PI-1.6.PO /usr/share/a2pi/A2VD1.PO
 	#fi
 	if [ ! -s /usr/share/a2pi/A2VD2.PO ] ; then
 	    if [ -e /usr/share/a2pi/A2VD2.PO ] || [ -L /usrshare/a2pi/A2VD2.PO ] ; then
