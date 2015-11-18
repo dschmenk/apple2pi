@@ -1,3 +1,9 @@
+a2pi (0.2.1-0) unstable; urgency=low
+
+  * First Jessie package
+
+ -- David Schmenk <dschmenk@gmail.com>  Tue, 17 Nov 2015 19:27:59 -0800
+
 a2pi (0.2.0-2) unstable; urgency=low
 
   * Add support for Raspberry Pi version 2

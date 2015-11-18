@@ -30,15 +30,17 @@ case "$1" in
         #
         # Disable getty on built-in serial port.
         #
-        ttyline=`grep ttyAMA0 /etc/inittab`
-	case "$ttyline" in
-	T0*)
-	    mv /etc/inittab /etc/inittab.bak
-	    sed 's/^T0/#T0/' /etc/inittab.bak > /etc/inittab
-            ;;
-	*)
-	    ;;
-	esac
+        if [ -e /etc/inittab ] ; then
+	    ttyline=`grep ttyAMA0 /etc/inittab`
+	    case "$ttyline" in
+	    T0*)
+	        mv /etc/inittab /etc/inittab.bak
+	        sed 's/^T0/#T0/' /etc/inittab.bak > /etc/inittab
+                ;;
+	    *)
+	        ;;
+	    esac
+        fi
         #
         # Disable joystick as a mouse in X
         #
@@ -48,7 +50,7 @@ case "$1" in
 	#
 	# Add default Pi user,pi, to groups fuse and input
 	#
-	addgroup pi fuse
+	# addgroup pi fuse
 	# addgroup pi input # already there by default
 	#
 	# Allow other users (root) to access FUSE mount points
@@ -76,7 +78,7 @@ case "$1" in
 	# Add schmenk.is-a-geek.com to apt sources
 	#
 	if [ "$(grep schmenk /etc/apt/sources.list)" = "" ] ; then
-		echo "deb http://schmenk.is-a-geek.com/raspbian wheezy contrib" >> /etc/apt/sources.list
+		echo "deb http://schmenk.is-a-geek.com/raspbian jessie contrib" >> /etc/apt/sources.list
 	fi
 	#
 	# Remove old install
