@@ -1,5 +1,6 @@
-#include "a2lib.c"
+#include <fcntl.h>
 #include <termios.h>
+#include "a2lib.c"
 #define	RUN	0
 #define	STOP	1
 
@@ -16,10 +17,36 @@ int main(int argc, char **argv)
     fd_set readset, openset;
     unsigned char iopkt[2];
     int state = RUN, cin = 0;
-    int pifd = a2open(argc > 1 ? argv[1] : "127.0.0.1");
-    if (pifd < 0)
+    int pifd, echofd = -1;
+    char *a2host = "127.0.0.1";
+    if (!isatty(STDIN_FILENO))
+        echofd = STDIN_FILENO;
+    /*
+     * Parse arguments.
+     */
+    while (argc > 1)
     {
-	perror("Unable to connect to Apple II Pi");
+        if (argc > 2 && argv[1][0] == '-' && argv[1][1] == 'f')
+        {
+            echofd = open(argv[2], O_RDONLY);
+            argc -= 2;
+            argv += 2;
+        }
+        else if (argv[1][0] != '-')
+        {
+            a2host = argv[1];
+            argc--;
+            argv++;
+        }
+        else
+        {
+            fprintf(stderr, "Invalid option: %s\n", argv[1]);
+            exit(EXIT_FAILURE);
+        }
+    }
+    if ((pifd = a2open(a2host)) < 0)
+    {
+	fprintf(stderr, "Unable to connect to Apple II Pi\n");
 	exit(EXIT_FAILURE);
     }
     /*
@@ -27,6 +54,42 @@ int main(int argc, char **argv)
      */
     iopkt[0] = 0x98;
     write(pifd, iopkt, 1);
+    if (echofd >= 0)
+    {
+	/*
+	 * Echo input file making sure to not drop characters.
+	 */
+	while (read(echofd, &cin, 1) == 1)
+	{
+	    if (cin == '\n')
+		cin = 0x0D;
+	    cin |= 0x80;
+	    a2cin(pifd, cin);
+	    while (read(pifd, iopkt, 2) == 2)
+	    {
+		if (iopkt[0] == 0x98)
+		{
+		    /*
+		     * Echo output.
+		     */
+		    putchar(iopkt[1] == 0x8D ? '\n' : iopkt[1] & 0x7F);
+		}
+		else if (iopkt[0] == 0x9E)
+		{
+		    if (iopkt[1] == cin)
+			break;
+		    else
+			fprintf(stderr, "\nInput character mismatch!\n");
+		}
+	    }
+	}
+        if (echofd != STDIN_FILENO)
+        {
+            close(echofd);
+            putchar('\n');
+        }
+        fflush(stdout);
+    }
     /*
      * Are we running interactively?
      */
@@ -152,36 +215,6 @@ int main(int argc, char **argv)
 			 * stdin probably closed.
 			 */
 			state = STOP;
-		}
-	    }
-	}
-    }
-    else
-    {
-	/*
-	 * Copy STDIN making sure to not drop characters.
-	 */
-	while (read(STDIN_FILENO, &cin, 1) == 1)
-	{
-	    if (cin == '\n')
-		cin = 0x0D;
-	    cin |= 0x80;
-	    a2cin(pifd, cin);
-	    while (read(pifd, iopkt, 2) == 2)
-	    {
-		if (iopkt[0] == 0x98)
-		{
-		    /*
-		     * Echo output.
-		     */
-		    putchar(iopkt[1] == 0x8D ? '\n' : iopkt[1] & 0x7F);
-		}
-		else if (iopkt[0] == 0x9E)
-		{
-		    if (iopkt[1] == cin)
-			break;
-		    else
-			fprintf(stderr, "\nInput character mismatch!\n");
 		}
 	    }
 	}
