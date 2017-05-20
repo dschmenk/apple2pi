@@ -83,10 +83,9 @@ case "$1" in
 	#
 	# Add a2pi service to systemd
 	#
-	if [ -f /usr/local/bin/a2pid ] ; then
+	if [ -f /usr/share/a2pi/a2pi.service ] && [ -x systemctl ] ; then
 		cp /usr/share/a2pi/a2pi.service /lib/systemd/
 		systemctl enable a2pi
-		systemctl reload a2pi
 	fi	
     ;;
 
