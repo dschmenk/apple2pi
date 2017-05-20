@@ -8,5 +8,5 @@
 
 # Additional options that are passed to the Daemon.
 # If you are not using the default serial port /dev/ttyAMA0, enter it here.
-# DAEMON_OPTS="/dev/ttyUSB0"
-DAEMON_OPTS=""
+# A2PID_OPTS="/dev/ttyUSB0"
+A2PID_OPTS=""

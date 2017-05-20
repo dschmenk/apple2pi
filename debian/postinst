@@ -81,55 +81,13 @@ case "$1" in
 		echo "deb http://schmenk.is-a-geek.com/raspbian jessie contrib" >> /etc/apt/sources.list
 	fi
 	#
-	# Remove old install
+	# Add a2pi service to systemd
 	#
 	if [ -f /usr/local/bin/a2pid ] ; then
-	    rm /usr/local/bin/a2pid
-	fi
-	if [ -f /usr/local/bin/a2serclk ] ; then
-	    rm /usr/local/bin/a2serclk
-	fi
-	if [ -f /usr/local/bin/a2mon ] ; then
-	    rm /usr/local/bin/a2mon
-	fi
-	if [ -f /usr/local/bin/dskread ] ; then
-            rm /usr/local/bin/dskread
-	fi
-	if [ -f /usr/local/bin/dskwrite ] ; then
-	    rm /usr/local/bin/dskwrite
-	fi
-	if [ -f /usr/local/bin/a2term ] ; then
-	    rm /usr/local/bin/a2term
-	fi
-	if [ -f /usr/local/bin/fusea2pi ] ; then
-	    rm /usr/local/bin/fusea2pi
-	fi
-	if [ -f /usr/local/bin/a2joy ] ; then
-	    rm /usr/local/bin/a2joy
-	fi
-	if [ -f /usr/local/bin/a2joymou ] ; then
-	    rm /usr/local/bin/a2joymou
-	fi
-	if [ -f /usr/local/bin/a2joypad ] ; then
-	    rm /usr/local/bin/a2joypad
-	fi
-	if [ -f /usr/local/bin/a2mount ] ; then
-	    rm /usr/local/bin/a2mount
-	fi
-	if [ -f /usr/local/bin/bload ] ; then
-	    rm /usr/local/bin/bload
-	fi
-	if [ -f /usr/local/bin/brun ] ; then
-	    rm /usr/local/bin/brun
-	fi
-	if [ -f /usr/local/sbin/a2pid ] ; then
-	    rm /usr/local/sbin/a2pid
-	fi
-	if [ "$(grep a2pid /etc/rc.local)" != "" ] ; then
-	    mv /etc/rc.local /etc/rc.local.old
-	    sed -e '/^# Start Apple II Pi/d' -e '/a2pid/d' -e '/^wait 1/d' -e '/a2joy/'d /etc/rc.local.old > /etc/rc.local
-	    rm /etc/rc.local.old
-	fi
+		cp /usr/share/a2pi/a2pi.service /lib/systemd/
+		systemctl enable a2pi
+		systemctl reload a2pi
+	fi	
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

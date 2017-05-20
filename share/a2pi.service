@@ -5,7 +5,8 @@ After=network.target
 [Service]
 Type=idle
 Environment="HOME=/root"
-ExecStart=/sbin/a2pid
+EnvironmentFile=-/etc/default/a2pi
+ExecStart=/sbin/a2pid $A2PID_OPTS
 Restart=on-failure
 RestartSec=60
 
