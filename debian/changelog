@@ -1,3 +1,9 @@
+a2pi (0.2.2-0) unstable; urgency=low
+
+  * First systemd compatibility
+
+ -- David Schmenk <dschmenk@gmail.com>  Sat, 20 May 2017 15:15:30 -0800
+
 a2pi (0.2.1-0) unstable; urgency=low
 
   * First Jessie package
