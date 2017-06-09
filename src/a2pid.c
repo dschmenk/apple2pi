@@ -17,7 +17,8 @@
 #include <linux/input.h>
 #include <linux/uinput.h>
 
-char deftty[] = "/dev/ttyAMA0"; /* Default for Raspberry Pi */
+//char deftty[] = "/dev/ttyAMA0"; /* Default for Raspberry Pi */
+char deftty[] = "/dev/serial0"; /* Default for Raspberry Pi */
 #if defined(SETSERCLK) && defined(__ARMEL__)
 #include "gpclk.c"
 #endif
