@@ -27,6 +27,12 @@ case "$1" in
 	    cp /boot/cmdline.txt /boot/cmdline.bak
 	    sed -i 's/console=ttyAMA0,[0-9]* kgdboc=ttyAMA0,[0-9]* //g' /boot/cmdline.txt
         fi
+	#
+	# Make sure UART is enabled
+	#
+	if [ "$(grep enable_uart /boot/config.txt)" = "" ] ; then
+		echo "enable_uart=1" >> /etc/apt/sources.list
+	fi
         #
         # Disable getty on built-in serial port.
         #

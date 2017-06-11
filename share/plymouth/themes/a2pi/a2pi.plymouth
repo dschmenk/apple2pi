@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=a2pi
+Description=Apple II Pi Splash
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/a2pi
+ScriptFile=/usr/share/plymouth/themes/a2pi/a2pi.script
