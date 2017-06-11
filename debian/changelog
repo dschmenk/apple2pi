@@ -1,6 +1,7 @@
-a2pi (0.2.2-1) unstable; urgency=low
+a2pi (0.2.2-2) unstable; urgency=low
 
   * Change default serial port to serial0
+  * Add plymouth splash screen
 
  -- David Schmenk <dschmenk@mail.com>  Thu, 08 Jun 2017 21:22:30 -0800
 

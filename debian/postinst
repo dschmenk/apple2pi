@@ -47,6 +47,13 @@ case "$1" in
 	        ;;
 	    esac
         fi
+	#
+	# Add plymouth splash screen
+	#
+	if [ -d /usr/share/plymouth/themes ] ; then
+	    cp -R /usr/share/a2pi/plymouth /usr/share/plymouth
+	    plymouth-set-default-theme a2pi
+	fi
         #
         # Disable joystick as a mouse in X
         #
