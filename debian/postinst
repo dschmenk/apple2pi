@@ -91,7 +91,7 @@ case "$1" in
 	# Add schmenk.is-a-geek.com to apt sources
 	#
 	if [ "$(grep schmenk /etc/apt/sources.list)" = "" ] ; then
-		echo "deb http://schmenk.is-a-geek.com/raspbian jessie contrib" >> /etc/apt/sources.list
+		echo "deb http://schmenk.is-a-geek.com/raspbian stretch contrib" >> /etc/apt/sources.list
 	fi
 	#
 	# Add a2pi service to systemd

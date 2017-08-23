@@ -1,3 +1,9 @@
+a2pi (0.2.2-3) unstable; urgency=low
+
+  * First Stretch release
+
+ -- David Schmenk <dschmenk@mail.com>  Wed, 23 Aug 2017 13:44:30 -0800
+
 a2pi (0.2.2-2) unstable; urgency=low
 
   * Change default serial port to serial0

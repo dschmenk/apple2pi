@@ -29,7 +29,7 @@ install:
 	-mkdir -p $(SBINDIR)
 	cp $(SBIN) $(SBINDIR)
 	-mkdir -p $(SHAREDIR)
-	cp ../share/* $(SHAREDIR)
+	cp -R ../share/* $(SHAREDIR)
 
 uninstall:
 	cd $(BINDIR); rm $(BIN) a2mount
