@@ -27,11 +27,15 @@ case "$1" in
 	    cp /boot/cmdline.txt /boot/cmdline.bak
 	    sed -i 's/console=ttyAMA0,[0-9]* kgdboc=ttyAMA0,[0-9]* //g' /boot/cmdline.txt
         fi
+        if [ "$(grep serial0 /boot/cmdline.txt)" != "" ] ; then
+	    cp /boot/cmdline.txt /boot/cmdline.bak
+	    sed -i 's/console=serial0,[0-9]* kgdboc=serial0,[0-9]* //g' /boot/cmdline.txt
+        fi
 	#
 	# Make sure UART is enabled
 	#
 	if [ "$(grep enable_uart /boot/config.txt)" = "" ] ; then
-		echo "enable_uart=1" >> /etc/apt/sources.list
+		echo "enable_uart=1" >> /boot/config.txt
 	fi
         #
         # Disable getty on built-in serial port.
@@ -51,7 +55,7 @@ case "$1" in
 	# Add plymouth splash screen
 	#
 	if [ -d /usr/share/plymouth/themes ] ; then
-	    cp -R /usr/share/a2pi/plymouth /usr/share/plymouth
+	    cp -R /usr/share/a2pi/plymouth/* /usr/share/plymouth
 	    plymouth-set-default-theme a2pi
 	fi
         #
