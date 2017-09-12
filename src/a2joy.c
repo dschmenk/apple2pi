@@ -3,6 +3,7 @@
  */
 #include "a2lib.c"
 #include <fcntl.h>
+#include <time.h>
 #include <linux/input.h>
 #include <linux/uinput.h>
 #include <signal.h>
