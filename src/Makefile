@@ -7,7 +7,7 @@ else
 BINDIR=$(DESTDIR)/usr/bin
 SHAREDIR=$(DESTDIR)/usr/share/a2pi
 endif
-BIN=a2joy a2joymou a2joypad a2mon a2term fusea2pi a2pidcmd dskread dskwrite bload brun
+BIN=a2joy a2joymou a2joypad a2mon a2term fusea2pi a2pidcmd dskread dskwrite bload brun nibread dskformat eddread
 SBIN=a2pid
 A2PIDEFS=-DSETSERCLK
 
