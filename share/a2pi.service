@@ -1,6 +1,6 @@
 [Unit]
 Description=Apple II Pi Daemon
-After=network.target
+After=
 
 [Service]
 Type=idle
