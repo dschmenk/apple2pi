@@ -1,3 +1,9 @@
+a2pi (0.2.2-4) unstable; urgency=low
+
+  * A2Pi 6.5 updates
+
+ -- David Schmenk <dschmenk@mail.com>  Sun, 25 Apr 2021 13:44:30 -0800
+
 a2pi (0.2.2-3) unstable; urgency=low
 
   * First Stretch release
