@@ -1,4 +1,16 @@
-a2pi (0.2.2-3) unstable; urgency=low
+a2pi (0.2.3-5) unstable; urgency=medium
+
+  * Flush writes to piDrives
+
+ -- David Schmenk <dschmenk@mail.com>  Sun, 9 May 2021 12:28:00 -0800
+
+a2pi (0.2.3-4) unstable; urgency=low
+
+  * A2Pi 6.5 updates
+
+ -- David Schmenk <dschmenk@mail.com>  Sun, 25 Apr 2021 13:44:30 -0800
+
+a2pi (0.2.3-3) unstable; urgency=low
 
   * First Stretch release
 

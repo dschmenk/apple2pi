@@ -183,6 +183,8 @@ int vdrvwrite(int afd, int drive, int block)
         lseek(vfd, block * 512, 0);
         if (write(vfd, block_buff, 512) != 512)
             err = 0x27; /* ProDOS I/O error */
+        else
+            fsync(vfd);
     }
     else
         err = 0x28; /* ProDOS No device connected error */
