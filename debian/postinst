@@ -80,10 +80,10 @@ case "$1" in
 	# Set up PIDRIVEs
 	#
 	#if [ ! -s /usr/share/a2pi/A2VD1.PO ] ; then
-	    if [ -e /usr/share/a2pi/A2VD1.PO ] || [ -L /usr/share/a2pi/A2VD1.PO ] ; then 
+	    if [ -e /usr/share/a2pi/A2VD1.PO ] || [ -L /usr/share/a2pi/A2VD1.PO ] ; then
 		rm /usr/share/a2pi/A2VD1.PO
 	    fi
-	    ln -s /usr/share/a2pi/A2PI-1.6.PO /usr/share/a2pi/A2VD1.PO
+	    ln -s /usr/share/a2pi/A2PI-1.7.PO /usr/share/a2pi/A2VD1.PO
 	#fi
 	if [ ! -s /usr/share/a2pi/A2VD2.PO ] ; then
 	    if [ -e /usr/share/a2pi/A2VD2.PO ] || [ -L /usrshare/a2pi/A2VD2.PO ] ; then
@@ -94,16 +94,16 @@ case "$1" in
 	#
 	# Add schmenk.is-a-geek.com to apt sources
 	#
-	if [ "$(grep schmenk /etc/apt/sources.list)" = "" ] ; then
-		echo "deb http://schmenk.is-a-geek.com/raspbian stretch contrib" >> /etc/apt/sources.list
-	fi
+	#if [ "$(grep schmenk /etc/apt/sources.list)" = "" ] ; then
+	#	echo "deb http://schmenk.is-a-geek.com/raspbian stretch contrib" >> /etc/apt/sources.list
+	#fi
 	#
 	# Add a2pi service to systemd
 	#
 	if [ -f /usr/share/a2pi/a2pi.service ] && [ -d /lib/systemd/system ] ; then
 		cp /usr/share/a2pi/a2pi.service /lib/systemd/system
 		systemctl enable a2pi
-	fi	
+	fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

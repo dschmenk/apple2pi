@@ -5,9 +5,9 @@
 ;****************************************
 
 PIROM	= 1
-.DEFINE	SIG	"PI"
+.DEFINE	SIG	"DS"
 	.INCLUDE "romincs.s"
-	
+
 ;****************************************
 ;*
 ;*      PER-SLOT ROM @ $Cx00
@@ -47,7 +47,7 @@ BANKSEL	EQU	$C0EF
 BANKSEL	EQU	$C0FF
 	.INCLUDE "cxrom.s"
 .ENDSCOPE
-	
+
 ;****************************************
 ;*
 ;*      OPTION ROM SPACE @ $C800

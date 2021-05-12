@@ -1,3 +1,9 @@
+a2pi (0.2.3-10) unstable; urgency=medium
+
+  * Change PIROM signature to not conflict with Slinky RAM drivers
+
+ -- David Schmenk <dschmenk@mail.com>  Wed, 12 May 2021 15:40:00 -0800
+
 a2pi (0.2.3-5) unstable; urgency=medium
 
   * Flush writes to piDrives
