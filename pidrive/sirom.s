@@ -4,7 +4,7 @@
 ;*
 ;****************************************
 
-.DEFINE	SIG	"SI"
+.DEFINE	SIG	"SD"
 
 	.INCLUDE "romincs.s"
 	
