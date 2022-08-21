@@ -25,6 +25,8 @@ install:
 	cp $(SBIN) $(SBINDIR)
 	-mkdir -p $(SHAREDIR)
 	cp -R ../share/* $(SHAREDIR)
+	mv $(SHAREDIR)/A2PI-1.7.PO $(SHAREDIR)/A2VD1.PO
+	mv $(SHAREDIR)/UTILS.PO $(SHAREDIR)/A2VD2.PO
 
 uninstall:
 	cd $(BINDIR); rm $(BIN) a2mount
