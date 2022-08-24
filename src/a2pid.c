@@ -694,6 +694,17 @@ openserial:
             state = RESET;
         }
     }
+    /* drain superfluous sync requests from potential fifo */
+    while (read(a2fd, iopkt, 1) == 1)
+    {
+        /* there's already some other request */
+        if (iopkt[0] != 0x80)
+        {
+            /* 'simulate terminal input' for a push back */
+            ioctl(a2fd, TIOCSTI, iopkt);
+            break;
+        }
+    }
     newtio.c_cc[VMIN] = 3; /* blocking read until 3 chars received */
     tcsetattr(a2fd, TCSANOW, &newtio);
     /*
