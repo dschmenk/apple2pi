@@ -496,7 +496,7 @@ void main(int argc, char **argv)
     fd_set readset, openset;
     char *ttypattern  = deftty;
     char *devtty  = NULL;
-    char *vdrvdir = "/usr/share/a2pi/"; /* default vdrv image directory */
+    char *vdrvdir = "/usr/local/share/a2pi/"; /* default vdrv image directory */
 
     /*
      * Parse arguments
