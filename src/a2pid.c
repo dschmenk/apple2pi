@@ -623,6 +623,21 @@ void main(int argc, char **argv)
      * Get vdrv images.
      */
     vdrvactive = vdrvopen(vdrvdir);
+    /*
+     * Open socket.
+     */
+    prlog("a2pid: Open server socket\n");
+    bzero(&servaddr, sizeof(servaddr));
+    servaddr.sin_family      = AF_INET;
+    servaddr.sin_port        = htons(6551);
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    srvfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (srvfd < 0)
+        die("error: socket create");
+    if (bind(srvfd,(struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+        die("error: bind socket");
+    if (listen(srvfd, MAX_CLIENT - 1) < 0)
+        die("error: listen socket");
 #if defined(SETSERCLK) && defined(__ARMEL__)
     /*
      * Initialize ACIA clock for Apple II Pi card
@@ -631,17 +646,20 @@ void main(int argc, char **argv)
         gpclk(271); /* divisor for ~1.8 MHz => (500/271) MHz */
 #endif
     /*
+     * Come back here on serial read error.
+     */
+openserial:
+    /*
      * Open serial port.
      */
-    if (!pathmatch(&devtty, ttypattern))
-        die("error: serial port not found");
+    while (!pathmatch(&devtty, ttypattern))
+        usleep(1000);
     prlog("a2pid: Open serial port\n");
 #ifdef TRACE
     printf("a2pid: open %s\n", devtty);
 #endif
-    a2fd = open(devtty, O_RDWR | O_NOCTTY);
-    if (a2fd < 0)
-        die("error: serial port open");
+    while ((a2fd = open(devtty, O_RDWR | O_NOCTTY)) < 0)
+        usleep(1000);
     tcflush(a2fd, TCIFLUSH);
     tcgetattr(a2fd, &oldtio); /* save current port settings */
     bzero(&newtio, sizeof(newtio));
@@ -679,22 +697,7 @@ void main(int argc, char **argv)
     newtio.c_cc[VMIN] = 3; /* blocking read until 3 chars received */
     tcsetattr(a2fd, TCSANOW, &newtio);
     /*
-     * Open socket.
-     */
-    prlog("a2pid: Open server socket\n");
-    bzero(&servaddr, sizeof(servaddr));
-    servaddr.sin_family      = AF_INET;
-    servaddr.sin_port        = htons(6551);
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    srvfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (srvfd < 0)
-        die("error: socket create");
-    if (bind(srvfd,(struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
-        die("error: bind socket");
-    if (listen(srvfd, MAX_CLIENT - 1) < 0)
-        die("error: listen socket");
-    /*
-     * Come basck here on RESET.
+     * Come back here on RESET.
      */
 reset:
     state = RUN;
@@ -973,7 +976,8 @@ reset:
                 else
                 {
                     prlog("a2pid: error read serial port ????\n");
-                    state = STOP;
+                    close(a2fd);
+                    goto openserial;
                 }
             }
             /*
