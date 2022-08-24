@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <glob.h>
 #include <termios.h>
 #include <string.h>
 #include <netinet/in.h>
@@ -456,6 +457,27 @@ void flushreqs(int a2fd, int clidx, int status, int result)
 }
 /*****************************************************************\
 *                                                                 *
+*                            Path matching                        *
+*                                                                 *
+\*****************************************************************/
+int pathmatch(char **path, char *pattern)
+{
+    glob_t result;
+    int found;
+
+    if (*path)
+    {
+        free(*path);
+        *path = NULL;
+    }
+    found = !glob(pattern, 0, NULL, &result);
+    if (found)
+        *path = strdup(*result.gl_pathv);
+    globfree(&result);
+    return found;
+}
+/*****************************************************************\
+*                                                                 *
 *                           Main entrypoint                       *
 *                                                                 *
 \*****************************************************************/
@@ -468,7 +490,8 @@ void main(int argc, char **argv)
     int a2fd, kbdfd, moufd, srvfd, maxfd;
     struct sockaddr_in servaddr;
     fd_set readset, openset;
-    char *devtty  = deftty;
+    char *ttypattern  = deftty;
+    char *devtty  = NULL;
     char *vdrvdir = "/usr/share/a2pi/"; /* default vdrv image directory */
 
     /*
@@ -485,16 +508,16 @@ void main(int argc, char **argv)
                 die("a2pid: daemon() failure");
             isdaemon = TRUE;
             /*
-             * Another argument must be tty device
+             * Another argument must be tty pattern
              */
             if (argc > 2)
-                devtty = argv[2];
+                ttypattern = argv[2];
         }
         else
             /*
-             * Must be tty device
+             * Must be tty pattern
              */
-            devtty = argv[1];
+            ttypattern = argv[1];
     }
     /*
      * Add signal handlers.
@@ -606,6 +629,8 @@ void main(int argc, char **argv)
     /*
      * Open serial port.
      */
+    if (!pathmatch(&devtty, ttypattern))
+        die("error: serial port not found");
     prlog("a2pid: Open serial port\n");
     a2fd = open(devtty, O_RDWR | O_NOCTTY);
     if (a2fd < 0)
