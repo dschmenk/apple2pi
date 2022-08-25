@@ -19,14 +19,14 @@ clean:
 
 install:
 	-mkdir -p $(BINDIR)
-	cp $(BIN) a2mount $(BINDIR)
-	cp $(BIN) a2setvd $(BINDIR)
+	cp $(BIN) a2mount a2setvd $(BINDIR)
 	-mkdir -p $(SBINDIR)
 	cp $(SBIN) $(SBINDIR)
 	-mkdir -p $(SHAREDIR)
 	cp -R ../share/* $(SHAREDIR)
 	mv $(SHAREDIR)/A2PI-1.7.PO $(SHAREDIR)/A2VD1.PO
 	mv $(SHAREDIR)/UTILS.PO $(SHAREDIR)/A2VD2.PO
+	systemctl enable --system $(SHAREDIR)/a2pi.service
 
 uninstall:
 	cd $(BINDIR); rm $(BIN) a2mount
