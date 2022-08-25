@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include "a2lib.c"
 
 char online[] = {
