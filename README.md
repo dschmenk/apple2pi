@@ -33,4 +33,4 @@ See the [upstream repo](https://github.com/dschmenk/apple2pi) for the original, 
 
 2. Build the project in `/pipico` (requires the [Raspberry Pico C/C++ SDK](https://www.raspberrypi.com/documentation/microcontrollers/c_sdk.html)).
 
-3. Execute `make` in `/src`.
+3. Execute `make` in `/src` (requires [libfuse-dev](https://packages.debian.org/en/sid/libfuse-dev)).
