@@ -653,13 +653,21 @@ openserial:
      * Open serial port.
      */
     while (!pathmatch(&devtty, ttypattern))
+    {
         usleep(1000);
+        if (state == STOP)
+            die("interrupted");
+    }
     prlog("a2pid: Open serial port\n");
 #ifdef TRACE
     printf("a2pid: open %s\n", devtty);
 #endif
     while ((a2fd = open(devtty, O_RDWR | O_NOCTTY)) < 0)
+    {
         usleep(1000);
+        if (state == STOP)
+            die("interrupted");
+    }
     tcflush(a2fd, TCIFLUSH);
     tcgetattr(a2fd, &oldtio); /* save current port settings */
     bzero(&newtio, sizeof(newtio));
