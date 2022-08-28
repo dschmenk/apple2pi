@@ -703,14 +703,21 @@ openserial:
         }
     }
     /* drain superfluous sync requests from potential fifo */
-    while (read(a2fd, iopkt, 1) == 1)
+    usleep(1000);
+    c = read(a2fd, iopkt, sizeof(iopkt));
+    for (i = 0; i < c; i++)
     {
+#ifdef TRACE
+        printf("a2pid: drain 0x%02X\n", iopkt[i]);
+#endif
         /* there's already some other request */
-        if (iopkt[0] != 0x80)
+        if (iopkt[i] != 0x80)
         {
+#ifdef TRACE
+            printf("a2pid: push back 0x%02X\n", iopkt[i]);
+#endif
             /* 'simulate terminal input' for a push back */
-            ioctl(a2fd, TIOCSTI, iopkt);
-            break;
+            ioctl(a2fd, TIOCSTI, &iopkt[i]);
         }
     }
     newtio.c_cc[VMIN] = 3; /* blocking read until 3 chars received */
