@@ -10,10 +10,8 @@ See the [upstream repo](https://github.com/dschmenk/apple2pi) for the original, 
 
 3. Execute
    ```
-   sudo apt install libfuse-dev -y
-   wget https://github.com/oliverschmidt/apple2pi/archive/refs/heads/master.zip -O apple2pi.zip
-   unzip apple2pi.zip
-   mv apple2pi-master apple2pi
+   sudo apt install git libfuse-dev -y
+   git clone https://github.com/oliverschmidt/apple2pi.git
    cd apple2pi
    make
    sudo make install
