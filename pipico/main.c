@@ -28,10 +28,12 @@ SOFTWARE.
 #include "pico/printf.h"
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
+#ifdef RASPBERRYPI_PICO_W
+#include "pico/cyw43_arch.h"
+#endif
 
 #include "bus.pio.h"
-
-void board();
+#include "board.h"
 
 #ifdef TRACE
 void uart_printf(uart_inst_t *uart, const char *format, ...) {
@@ -47,7 +49,25 @@ void uart_printf(uart_inst_t *uart, const char *format, ...) {
 }
 #endif
 
-int main() {
+void res_callback(uint gpio, uint32_t events) {
+}
+
+void main(void) {
+    multicore_launch_core1(board);
+
+#ifdef RASPBERRYPI_PICO_W
+    cyw43_arch_init();
+#else
+    gpio_init(PICO_DEFAULT_LED_PIN);
+    gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
+#endif
+
+    gpio_init(gpio_irq);
+    gpio_pull_up(gpio_irq);
+
+    gpio_init(gpio_res);
+    gpio_set_irq_enabled_with_callback(gpio_res, GPIO_IRQ_EDGE_RISE, true, &res_callback);
+
     stdio_init_all();
     stdio_set_translate_crlf(&stdio_usb, false);
 
@@ -57,41 +77,6 @@ int main() {
     gpio_set_function(0, GPIO_FUNC_UART);
     gpio_set_function(1, GPIO_FUNC_UART);
 #endif
-
-    for (uint gpio = gpio_addr; gpio < gpio_addr + size_addr; gpio++) {
-        gpio_init(gpio);
-        gpio_set_pulls(gpio, false, false);  // floating
-    }
-
-    for (uint gpio = gpio_data; gpio < gpio_data + size_data; gpio++) {
-        pio_gpio_init(pio0, gpio);
-        gpio_set_pulls(gpio, false, false);  // floating
-    }
-
-    gpio_init(gpio_enbl);
-    gpio_set_pulls(gpio_enbl, false, false); // floating
-
-    gpio_init(gpio_irq);
-    gpio_pull_up(gpio_irq);
-
-    gpio_init(gpio_rdy);
-    gpio_pull_up(gpio_rdy);
-
-    gpio_init(gpio_led);
-    gpio_set_dir(gpio_led, GPIO_OUT);
-
-    uint offset;
-
-    offset = pio_add_program(pio0, &enbl_program);
-    enbl_program_init(offset);
-
-    offset = pio_add_program(pio0, &write_program);
-    write_program_init(offset);
-
-    offset = pio_add_program(pio0, &read_program);
-    read_program_init(offset);
-
-    multicore_launch_core1(board);
 
     while (true) {
         if (multicore_fifo_rvalid()) {
@@ -111,7 +96,15 @@ int main() {
 #endif
             }
         }
-    }
 
-    return 0;
+#ifdef RASPBERRYPI_PICO_W
+        static bool last_active;
+        if (active != last_active) {
+            cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, active);
+            last_active = active;
+        }
+#else
+        gpio_put(PICO_DEFAULT_LED_PIN, active);
+#endif
+    }
 }

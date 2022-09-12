@@ -26,23 +26,51 @@ SOFTWARE.
 
 #include "bus.pio.h"
 
+#include "board.h"
+
 extern const __attribute__((aligned(4))) uint8_t firmware[];
 
-static bool     __not_in_flash( "active")  active;
-static uint32_t __not_in_flash("command") command;
-static uint32_t __not_in_flash("control") control;
+volatile bool active;
 
-void __not_in_flash_func(board)() {
+static uint32_t command;
+static uint32_t control;
+
+void __time_critical_func(board)(void) {
+    for (uint gpio = gpio_addr; gpio < gpio_addr + size_addr; gpio++) {
+        gpio_init(gpio);
+        gpio_set_pulls(gpio, false, false);  // floating
+    }
+
+    for (uint gpio = gpio_data; gpio < gpio_data + size_data; gpio++) {
+        pio_gpio_init(pio0, gpio);
+        gpio_set_pulls(gpio, false, false);  // floating
+    }
+
+    gpio_init(gpio_enbl);
+    gpio_set_pulls(gpio_enbl, false, false);  // floating
+
+    uint offset;
+
+    offset = pio_add_program(pio0, &enbl_program);
+    enbl_program_init(offset);
+
+    offset = pio_add_program(pio0, &write_program);
+    write_program_init(offset);
+
+    offset = pio_add_program(pio0, &read_program);
+    read_program_init(offset);
+
+    active = false;
+
+    command = 0;
+    control = 0;
+
     while (true) {
         uint32_t enbl = pio_sm_get_blocking(pio0, sm_enbl);
         uint32_t addr = enbl & 0x0FFF;
         uint32_t io   = enbl & 0x0F00;  // IOSTRB or IOSEL
         uint32_t strb = enbl & 0x0800;  // IOSTRB
         uint32_t read = enbl & 0x1000;  // R/W
-
-        if (addr == 0x0FFF) {
-            active = false;
-        }
 
         if (read) {
             if (!io) {  // DEVSEL
@@ -86,8 +114,8 @@ void __not_in_flash_func(board)() {
 
         if (io && !strb) {
             active = true;
+        } else if (addr == 0x0FFF) {
+            active = false;
         }
-
-        gpio_put(gpio_led, active);
     }
 }
