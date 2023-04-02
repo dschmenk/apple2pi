@@ -231,18 +231,22 @@ SENDACC	PHP
 	SEI		; Disable interrupts
 	PHA
 	LDA	SSCSLOT
-	ORA	#$88+1
+	ORA	#$89+1
 	TAY
 	LDA	#$07
-	STA	$C002-1,Y	; Enable transmit IRQ
-	LDA	$C001-1,Y	; Clear any oustanding interrupts
+	STA	$C002-2,Y	; Enable transmit IRQ
+	LDA	$C001-2,Y	; Clear any oustanding interrupts
 	PLA
-	STA	$C000-1,Y	; AVOID PHANTOM READ FROM $C0XX
-SENDWT	LDA	$C001-1,Y
+	STA	$C000-2,Y	; AVOID PHANTOM READ FROM $C0XX
+	PHA
+SENDWT	LDA	$C001-2,Y
 ;	AND	#$80	; Check IRQ status
 	BPL	SENDWT
 	LDA	#$0B	; Disable transmit IRQ
-	STA	$C002-1,Y
+	STA	$C002-2,Y
+IRQWT	LDA	$C001-2,Y	; Wait for IRQ to clear
+	BMI	IRQWT
+	PLA
 	PLP		; Restore interrupts
 	RTS
 *
@@ -251,7 +255,7 @@ SENDWT	LDA	$C001-1,Y
 RECVACC	LDA	SSCSLOT
 	ORA	#$89+1
 	TAY
-RECVWT	LDA	$C000-1,Y
+RECVWT	LDA	$C001-2,Y
 	AND	#$08
 	BEQ	RECVWT
 	LDA	$C000-2,Y
