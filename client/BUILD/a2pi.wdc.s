@@ -258,27 +258,34 @@ SENDMOD	LDA	$C062
 *
 * ACIA SEND BYTE IN ACCUMULATOR
 *
-SENDACC	PHP
-	SEI		; Disable interrupts
+SENDACC	;PHP
+	;SEI		; Disable interrupts
 	PHA
 	LDA	SSCSLOT
 	ORA	#$88+2
 	TAY
-	LDA	#$07
-	STA	$C002-2,Y	; Enable transmit IRQ
-	LDA	$C001-2,Y	; Clear any oustanding interrupts
+	;LDA	#$07
+	;STA	$C002-2,Y	; Enable transmit IRQ
+	;LDA	$C001-2,Y	; Clear any oustanding interrupts
 	PLA
 	STA	$C000-2,Y	; AVOID PHANTOM READ FROM $C0XX
 	PHA
-SENDWT	LDA	$C001-2,Y
-;	AND	#$80	; Check IRQ status
-	BPL	SENDWT
-	LDA	#$0B	; Disable transmit IRQ
-	STA	$C002-2,Y
-IRQWT	LDA	$C001-2,Y	; Wait for IRQ to clear
-	BMI	IRQWT
+	TXA
+	PHA
+	LDA	#$10
+	JSR	WAIT
 	PLA
-	PLP		; Restore interrupts
+	TAX
+	;PHA
+;SENDWT	LDA	$C001-2,Y
+	;AND	#$80	; Check IRQ status
+	;BPL	SENDWT
+	;LDA	#$0B	; Disable transmit IRQ
+	;STA	$C002-2,Y
+;IRQWT	LDA	$C001-2,Y	; Wait for IRQ to clear
+	;BMI	IRQWT
+	PLA
+	;PLP		; Restore interrupts
 	RTS
 *
 * ACIA RECEIVE BYTE IN ACCUMULATOR

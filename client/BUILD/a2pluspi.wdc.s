@@ -227,27 +227,34 @@ SENDMOD	LDA	$C062
 *
 * ACIA SEND BYTE IN ACCUMULATOR
 *
-SENDACC	PHP
-	SEI		; Disable interrupts
+SENDACC	;PHP
+	;SEI		; Disable interrupts
 	PHA
 	LDA	SSCSLOT
 	ORA	#$88+2
 	TAY
-	LDA	#$07
-	STA	$C002-2,Y	; Enable transmit IRQ
-	LDA	$C001-2,Y	; Clear any oustanding interrupts
+	;LDA	#$07
+	;STA	$C002-2,Y	; Enable transmit IRQ
+	;LDA	$C001-2,Y	; Clear any oustanding interrupts
 	PLA
 	STA	$C000-2,Y	; AVOID PHANTOM READ FROM $C0XX
-;	PHA
-SENDWT	LDA	$C001-2,Y
-;	AND	#$80	; Check IRQ status
-	BPL	SENDWT
-	LDA	#$0B	; Disable transmit IRQ
-	STA	$C002-2,Y
-IRQWT	LDA	$C001-2,Y	; Wait for IRQ to clear
-	BMI	IRQWT
-;	PLA
-	PLP		; Restore interrupts
+	PHA
+	TXA
+	PHA
+	LDA	#$10
+	JSR	WAIT
+	PLA
+	TAX
+	;PHA
+;SENDWT	LDA	$C001-2,Y
+	;AND	#$80	; Check IRQ status
+	;BPL	SENDWT
+	;LDA	#$0B	; Disable transmit IRQ
+	;STA	$C002-2,Y
+;IRQWT	LDA	$C001-2,Y	; Wait for IRQ to clear
+	;BMI	IRQWT
+	PLA
+	;PLP		; Restore interrupts
 	RTS
 *
 * ACIA RECEIVE BYTE IN ACCUMULATOR
@@ -257,7 +264,7 @@ RECVACC	;LDA	SSCSLOT
 	;TAY
 	LDY	SSCSLOT
 RECVWT	;LDA	$C001-2,Y
-	LDA	$C088,Y
+	LDA	$C089,Y
 	AND	#$08
 	BEQ	RECVWT
 	;LDA	$C000-2,Y
@@ -276,7 +283,6 @@ CHKEVENT	LDA	KEYBD	; CHECK FOR KEY PRESS
 	LDA	$C089,Y
 	AND	#$08
 	BEQ	CHKMOU
-	;LDA	$C000-2,Y
 	LDA	$C088,Y
 	JMP	HOSTREQ
 CHKMOU	DEC	WAITEV	; CHECK FOR MOUSE UPDATE
