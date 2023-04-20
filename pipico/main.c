@@ -57,7 +57,7 @@ void main(void) {
 
 #ifdef RASPBERRYPI_PICO_W
     cyw43_arch_init();
-#else
+#elif defined(PICO_DEFAULT_LED_PIN)
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
 #endif
@@ -103,7 +103,7 @@ void main(void) {
             cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, active);
             last_active = active;
         }
-#else
+#elif defined(PICO_DEFAULT_LED_PIN)
         gpio_put(PICO_DEFAULT_LED_PIN, active);
 #endif
     }
