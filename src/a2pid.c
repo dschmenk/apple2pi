@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <glob.h>
 #include <termios.h>
 #include <string.h>
 #include <netinet/in.h>
@@ -35,7 +36,7 @@ char deftty[] = "/dev/serial0"; /* Default for Raspberry Pi */
  * Apple II request entry
  */
 #define MAX_XFER        64
-#define AWAIT_COMPLETE	0x100
+#define AWAIT_COMPLETE  0x100
 struct a2request {
     int  idx;
     int  type;
@@ -48,10 +49,10 @@ struct a2request {
 /*
  * Client info
  */
-#define	CLIENT_OPEN	1
-#define	CLIENT_CLOSING	2
-#define	CLIENT_COUT	4
-#define MAX_CLIENT	8
+#define	CLIENT_OPEN     1
+#define	CLIENT_CLOSING  2
+#define	CLIENT_COUT     4
+#define MAX_CLIENT      8
 
 struct {
     int fd;
@@ -76,14 +77,14 @@ int vdrvfd[2];
 /*
  * Daemon states.
  */
-#define	RUN	0
-#define	STOP	1
-#define	RESET	2
+#define	RUN     0
+#define	STOP    1
+#define	RESET   2
 volatile int state = RUN, isdaemon = FALSE;
 void prlog(char *str)
 {
     if (!isdaemon)
-	puts(str);
+        puts(str);
 }
 static void sig_bye(int signo)
 {
@@ -102,12 +103,16 @@ int vdrvopen(char *path)
     char filename[256];
     strcpy(filename, path);
     strcat(filename, "A2VD1.PO");
-    //printf("vdrv: open %s\n", filename);
+#ifdef TRACE
+    printf("vdrv: open %s\n", filename);
+#endif
     if ((vdrvfd[0] = open(filename, O_RDWR, 0)) < 0)
         vdrvfd[0] = 0;
     strcpy(filename, path);
     strcat(filename, "A2VD2.PO");
-    //printf("vdrv: open %s\n", filename);
+#ifdef TRACE
+    printf("vdrv: open %s\n", filename);
+#endif
     if ((vdrvfd[1] = open(filename, O_RDWR, 0)) < 0)
         vdrvfd[1] = 0;
     return vdrvfd[0] + vdrvfd[1];
@@ -315,7 +320,7 @@ void sendrelxy(int fd, int x, int y)
     write(fd, &evsync, sizeof(evsync));
 }
 /*****************************************************************\
- *                                                                 *
+*                                                                 *
 *                    Request queue management                     *
 *                                                                 *
 \*****************************************************************/
@@ -456,6 +461,27 @@ void flushreqs(int a2fd, int clidx, int status, int result)
 }
 /*****************************************************************\
 *                                                                 *
+*                            Path matching                        *
+*                                                                 *
+\*****************************************************************/
+int pathmatch(char **path, char *pattern)
+{
+    glob_t result;
+    int found;
+
+    if (*path)
+    {
+        free(*path);
+        *path = NULL;
+    }
+    found = !glob(pattern, 0, NULL, &result);
+    if (found)
+        *path = strdup(*result.gl_pathv);
+    globfree(&result);
+    return found;
+}
+/*****************************************************************\
+*                                                                 *
 *                           Main entrypoint                       *
 *                                                                 *
 \*****************************************************************/
@@ -468,8 +494,9 @@ void main(int argc, char **argv)
     int a2fd, kbdfd, moufd, srvfd, maxfd;
     struct sockaddr_in servaddr;
     fd_set readset, openset;
-    char *devtty  = deftty;
-    char *vdrvdir = "/usr/share/a2pi/"; /* default vdrv image directory */
+    char *ttypattern  = deftty;
+    char *devtty  = NULL;
+    char *vdrvdir = "/usr/local/share/a2pi/"; /* default vdrv image directory */
 
     /*
      * Parse arguments
@@ -485,16 +512,16 @@ void main(int argc, char **argv)
                 die("a2pid: daemon() failure");
             isdaemon = TRUE;
             /*
-             * Another argument must be tty device
+             * Another argument must be tty pattern
              */
             if (argc > 2)
-                devtty = argv[2];
+                ttypattern = argv[2];
         }
         else
             /*
-             * Must be tty device
+             * Must be tty pattern
              */
-            devtty = argv[1];
+            ttypattern = argv[1];
     }
     /*
      * Add signal handlers.
@@ -596,6 +623,21 @@ void main(int argc, char **argv)
      * Get vdrv images.
      */
     vdrvactive = vdrvopen(vdrvdir);
+    /*
+     * Open socket.
+     */
+    prlog("a2pid: Open server socket\n");
+    bzero(&servaddr, sizeof(servaddr));
+    servaddr.sin_family      = AF_INET;
+    servaddr.sin_port        = htons(6551);
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    srvfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (srvfd < 0)
+        die("error: socket create");
+    if (bind(srvfd,(struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+        die("error: bind socket");
+    if (listen(srvfd, MAX_CLIENT - 1) < 0)
+        die("error: listen socket");
 #if defined(SETSERCLK) && defined(__ARMEL__)
     /*
      * Initialize ACIA clock for Apple II Pi card
@@ -604,12 +646,28 @@ void main(int argc, char **argv)
         gpclk(271); /* divisor for ~1.8 MHz => (500/271) MHz */
 #endif
     /*
+     * Come back here on serial read error.
+     */
+openserial:
+    /*
      * Open serial port.
      */
+    while (!pathmatch(&devtty, ttypattern))
+    {
+        usleep(1000);
+        if (state == STOP)
+            die("interrupted");
+    }
     prlog("a2pid: Open serial port\n");
-    a2fd = open(devtty, O_RDWR | O_NOCTTY);
-    if (a2fd < 0)
-        die("error: serial port open");
+#ifdef TRACE
+    printf("a2pid: open %s\n", devtty);
+#endif
+    while ((a2fd = open(devtty, O_RDWR | O_NOCTTY)) < 0)
+    {
+        usleep(1000);
+        if (state == STOP)
+            die("interrupted");
+    }
     tcflush(a2fd, TCIFLUSH);
     tcgetattr(a2fd, &oldtio); /* save current port settings */
     bzero(&newtio, sizeof(newtio));
@@ -644,25 +702,28 @@ void main(int argc, char **argv)
             state = RESET;
         }
     }
+    /* drain superfluous sync requests from potential fifo */
+    usleep(1000);
+    c = read(a2fd, iopkt, sizeof(iopkt));
+    for (i = 0; i < c; i++)
+    {
+#ifdef TRACE
+        printf("a2pid: drain 0x%02X\n", iopkt[i]);
+#endif
+        /* there's already some other request */
+        if (iopkt[i] != 0x80)
+        {
+#ifdef TRACE
+            printf("a2pid: push back 0x%02X\n", iopkt[i]);
+#endif
+            /* 'simulate terminal input' for a push back */
+            ioctl(a2fd, TIOCSTI, &iopkt[i]);
+        }
+    }
     newtio.c_cc[VMIN] = 3; /* blocking read until 3 chars received */
     tcsetattr(a2fd, TCSANOW, &newtio);
     /*
-     * Open socket.
-     */
-    prlog("a2pid: Open server socket\n");
-    bzero(&servaddr, sizeof(servaddr));
-    servaddr.sin_family      = AF_INET;
-    servaddr.sin_port        = htons(6551);
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    srvfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (srvfd < 0)
-        die("error: socket create");
-    if (bind(srvfd,(struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
-        die("error: bind socket");
-    if (listen(srvfd, MAX_CLIENT - 1) < 0)
-        die("error: listen socket");
-    /*
-     * Come basck here on RESET.
+     * Come back here on RESET.
      */
 reset:
     state = RUN;
@@ -698,7 +759,9 @@ reset:
                 rdycnt--;
                 if (read(a2fd, iopkt, 3) == 3)
                 {
-                    // printf("a2pi: A2 Event [0x%02X] [0x%02X] [0x%02X]\n", iopkt[0], iopkt[1], iopkt[2]);
+#ifdef TRACE
+                    printf("a2pi: A2 Event [0x%02X] [0x%02X] [0x%02X]\n", iopkt[0], iopkt[1], iopkt[2]);
+#endif
                     switch (iopkt[0])
                     {
                         case 0x80: /* sync */
@@ -709,23 +772,31 @@ reset:
                             flushreqs(a2fd, 0, -1, -1);
                             break;
                         case 0x82: /* keyboard event */
-                            // printf("Keyboard Event: 0x%02X:%c\n", iopkt[1], iopkt[2] & 0x7F);
+#ifdef TRACE
+                            printf("Keyboard Event: 0x%02X:%c\n", iopkt[1], iopkt[2] & 0x7F);
+#endif
                             sendkey(kbdfd, iopkt[1], iopkt[2]);
                             //if (iopkt[2] == 0x9B && iopkt[1] == 0xC0)
                             //state = STOP;
                             break;
                         case 0x84: /* mouse move event */
-                            //printf("Mouse XY Event: %d,%d\n", (signed char)iopkt[1], (signed char)iopkt[2]);
+#ifdef TRACE
+                            printf("Mouse XY Event: %d,%d\n", (signed char)iopkt[1], (signed char)iopkt[2]);
+#endif
                             sendrelxy(moufd, (signed char)iopkt[1], (signed char)iopkt[2]);
                             break;
                         case 0x86: /* mouse button event */
-                            // printf("Mouse Button %s Event 0x%02X\n", iopkt[2] ? "[PRESS]" : "[RELEASE]", iopkt[1]);
-                            sendbttn(moufd, iopkt[1], iopkt[2]);
+#ifdef TRACE
+                            printf("Mouse Button %s Event 0x%02X\n", iopkt[2] ? "[PRESS]" : "[RELEASE]", iopkt[1]);
+#endif
+                          sendbttn(moufd, iopkt[1], iopkt[2]);
                             break;
                         case 0x90: /* acknowledge read bytes request*/
                             if (a2reqlist) /* better have an outstanding request */
                             {
-                                //printf("a2pid: read %d of %d bytes from 0x%04X\n", a2reqlist->xfer, a2reqlist->count, a2reqlist->addr);
+#ifdef TRACE
+                                printf("a2pid: read %d of %d bytes from 0x%04X\n", a2reqlist->xfer, a2reqlist->count, a2reqlist->addr);
+#endif
                                 newtio.c_cc[VMIN]  = 1; /* blocking read until 1 char received */
                                 tcsetattr(a2fd, TCSANOW, &newtio);
                                 c = a2reqlist->count - a2reqlist->xfer > MAX_XFER
@@ -755,7 +826,9 @@ reset:
                         case 0x92: /* acknowledge write bytes */
                             if (a2reqlist) /* better have an outstanding request */
                             {
-                                //printf("a2pid: wrote %d of %d bytes to 0x%04X\n", a2reqlist->xfer, a2reqlist->count, a2reqlist->addr);
+#ifdef TRACE
+                                printf("a2pid: wrote %d of %d bytes to 0x%04X\n", a2reqlist->xfer, a2reqlist->count, a2reqlist->addr);
+#endif
                                 newtio.c_cc[VMIN]  = 1; /* blocking read until 1 char received */
                                 tcsetattr(a2fd, TCSANOW, &newtio);
                                 c = a2reqlist->count - a2reqlist->xfer > MAX_XFER
@@ -785,7 +858,9 @@ reset:
                         case 0x94: /* acknowledge call */
                             if (a2reqlist) /* better have an outstanding request */
                             {
-                                //printf("a2pid: call address 0x%04X\n", a2reqlist->addr);
+#ifdef TRACE
+                                printf("a2pid: call address 0x%04X\n", a2reqlist->addr);
+#endif
                                 newtio.c_cc[VMIN]  = 1; /* blocking read until 1 char received */
                                 tcsetattr(a2fd, TCSANOW, &newtio);
                                 if (!writeword(a2fd, a2reqlist->addr, iopkt[0] + 1))
@@ -800,7 +875,9 @@ reset:
                         case 0x96: /* send input char to Apple II */
                             if (a2reqlist) /* better have an outstanding request */
                             {
-                                //printf("a2pid: call address 0x%04X\n", a2reqlist->addr);
+#ifdef TRACE
+                                printf("a2pid: call address 0x%04X\n", a2reqlist->addr);
+#endif
                                 newtio.c_cc[VMIN]  = 1; /* blocking read until 1 char received */
                                 tcsetattr(a2fd, TCSANOW, &newtio);
                                 if (!writeword(a2fd, a2reqlist->addr, 0x97))
@@ -822,7 +899,9 @@ reset:
                         case 0x9F: /* request complete error */
                             if (a2reqlist) /* better have an outstanding request */
                             {
-                                //printf("a2pid: complete request 0x%02X:0x%02X\n", (unsigned char)iopkt[0], (unsigned char)iopkt[1]);
+#ifdef TRACE
+                                printf("a2pid: complete request 0x%02X:0x%02X\n", (unsigned char)iopkt[0], (unsigned char)iopkt[1]);
+#endif
                                 if ((a2reqlist->type == 0x90 || a2reqlist->type == 0x92)
                                     && (a2reqlist->count > a2reqlist->xfer))
                                 {
@@ -831,7 +910,9 @@ reset:
                                 }
                                 else
                                 {
-                                    //printf("a2pid: finish request 0x%02X:0x%02X\n", (unsigned char)iopkt[0], (unsigned char)iopkt[1]);
+#ifdef TRACE
+                                    printf("a2pid: finish request 0x%02X:0x%02X\n", (unsigned char)iopkt[0], (unsigned char)iopkt[1]);
+#endif
                                     finreq(a2fd, (unsigned char)iopkt[0], (unsigned char)iopkt[1]);
                                 }
                             }
@@ -840,7 +921,9 @@ reset:
                             break;
                         case 0xA0: /* virtual drive 1 STATUS call */
                         case 0xA2: /* virtual drive 2 STATUS call */
-                            //printf("vdrive: STATUS unit:%d\n", (iopkt[0] >> 1) & 0x01);
+#ifdef TRACE
+                            printf("vdrive: STATUS unit:%d\n", (iopkt[0] >> 1) & 0x01);
+#endif
                             iopkt[3] = iopkt[0] + 1; /* ack */
                             write(a2fd, &iopkt[3], 1);
                             iopkt[0] = vdrvstat(a2fd, (iopkt[0] >> 1) & 0x01);
@@ -849,12 +932,16 @@ reset:
                             {
                                 iopkt[0] = a2reqlist->type;
                                 write(a2fd, iopkt, 1);
-				//printf("vdrive: status resend request %04X\n", a2reqlist->type);
+#ifdef TRACE
+                                printf("vdrive: status resend request %04X\n", a2reqlist->type);
+#endif
                             }
                             break;
                         case 0xA4: /* virtual drive 1 READ call */
                         case 0xA6: /* virtual drive 2 READ call */
-                            //printf("vdrive: READ unit:%d block:%d\n", (iopkt[0] >> 1) & 0x01, iopkt[1] | (iopkt[2] << 8));
+#ifdef TRACE
+                            printf("vdrive: READ unit:%d block:%d\n", (iopkt[0] >> 1) & 0x01, iopkt[1] | (iopkt[2] << 8));
+#endif
                             iopkt[3] = iopkt[0] + 1; /* ack */
                             write(a2fd, &iopkt[3], 1);
                             iopkt[0] = vdrvread(a2fd, (iopkt[0] >> 1) & 0x01, iopkt[1] | (iopkt[2] << 8));
@@ -863,12 +950,16 @@ reset:
                             {
                                 iopkt[0] = a2reqlist->type;
                                 write(a2fd, iopkt, 1);
-				//printf("vdrive: read resend request %04X\n", a2reqlist->type);
+#ifdef TRACE
+                                printf("vdrive: read resend request %04X\n", a2reqlist->type);
+#endif
                             }
                             break;
                         case 0xA8: /* virtual drive 1 WRITE call */
                         case 0xAA: /* virtual drive 2 WRITE call */
-                            //printf("vdrive: WRITE unit:%d block:%d\n", (iopkt[0] >> 1) & 0x01, iopkt[1] | (iopkt[2] << 8));
+#ifdef TRACE
+                            printf("vdrive: WRITE unit:%d block:%d\n", (iopkt[0] >> 1) & 0x01, iopkt[1] | (iopkt[2] << 8));
+#endif
                             iopkt[3] = iopkt[0] + 1; /* ack */
                             write(a2fd, &iopkt[3], 1);
                             newtio.c_cc[VMIN] = 1; /* blocking read until command packet received */
@@ -881,11 +972,15 @@ reset:
                             {
                                 iopkt[0] = a2reqlist->type;
                                 write(a2fd, iopkt, 1);
-				//printf("vdrive: write resend request %04X\n", a2reqlist->type);
+#ifdef TRACE
+                                printf("vdrive: write resend request %04X\n", a2reqlist->type);
+#endif
                             }
                             break;
                         case 0xAC: /* virtual clock TIME call */
-                            //printf("vclock: TIME\n");
+#ifdef TRACE
+                            printf("vclock: TIME\n");
+#endif
                             iopkt[0] = 0xAD; /* ack */
                             write(a2fd, iopkt, 1);
                             write(a2fd, prodos_time(), 4);
@@ -893,7 +988,9 @@ reset:
                             {
                                 iopkt[0] = a2reqlist->type;
                                 write(a2fd, iopkt, 1);
-				//printf("vclock: resend request %04X\n", a2reqlist->type);
+#ifdef TRACE
+                                printf("vclock: resend request %04X\n", a2reqlist->type);
+#endif
                             }
                             break;
                         default:
@@ -905,7 +1002,8 @@ reset:
                 else
                 {
                     prlog("a2pid: error read serial port ????\n");
-                    state = STOP;
+                    close(a2fd);
+                    goto openserial;
                 }
             }
             /*
@@ -950,7 +1048,9 @@ reset:
                     rdycnt--;
                     if (read(a2client[i].fd, iopkt, 1) == 1)
                     {
-                        // printf("a2pi: Client Request [0x%02X]\n", iopkt[0]);
+#ifdef TRACE
+                        printf("a2pi: Client Request [0x%02X]\n", iopkt[0]);
+#endif
                         switch (iopkt[0])
                         {
                             case 0x90: /* read bytes */
