@@ -30,7 +30,7 @@ SOFTWARE.
 
 extern const __attribute__((aligned(4))) uint8_t firmware[];
 
-volatile bool active;
+static bool active;
 
 static uint32_t command;
 static uint32_t control;

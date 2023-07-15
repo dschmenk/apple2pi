@@ -27,8 +27,6 @@ SOFTWARE.
 #ifndef _BOARD_H
 #define _BOARD_H
 
-extern volatile bool active;
-
 void board(void);
 
 #endif
