@@ -18,6 +18,9 @@ FetchContent_Declare(a2pico
         )
 FetchContent_MakeAvailable(a2pico)
 
+add_dependencies(${PROJECT_NAME} rom)
+add_custom_target(rom make -C ../../pidrive)
+
 target_sources(${PROJECT_NAME} PRIVATE
         main.c
         board.c
