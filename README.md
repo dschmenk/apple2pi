@@ -1,6 +1,8 @@
 # Apple II Pi
 
-See the [upstream repo](https://github.com/dschmenk/apple2pi) for the original, full info.
+1. See the [upstream repo](https://github.com/dschmenk/apple2pi) for the original, full info.
+
+2. This fork is based on [A2Pico](https://github.com/oliverschmidt/a2pico).
 
 ## Installing
 
