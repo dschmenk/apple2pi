@@ -27,8 +27,6 @@ See the [upstream repo](https://github.com/dschmenk/apple2pi) for the original, 
 
 ## Building
 
-1. Execute `make` in `/pidrive` (requires [cc65](https://cc65.github.io/)).
+1. Build the project in `/pipico` (requires the [Raspberry Pico C/C++ SDK](https://www.raspberrypi.com/documentation/microcontrollers/c_sdk.html)).
 
-2. Build the project in `/pipico` (requires the [Raspberry Pico C/C++ SDK](https://www.raspberrypi.com/documentation/microcontrollers/c_sdk.html)).
-
-3. Execute `make` in `/src` (requires [libfuse-dev](https://packages.debian.org/en/sid/libfuse-dev)).
+2. Execute `make` in `/src` (requires [libfuse-dev](https://packages.debian.org/en/sid/libfuse-dev)).
