@@ -6,11 +6,19 @@
 
 ## Installing
 
-1. Flash [Apple-II-Pi.uf2](https://github.com/oliverschmidt/apple2pi/releases/latest/download/Apple-II-Pi.uf2) to the Raspberry Pi Pico.
+1. Flash [Apple-II-Pi.uf2](https://github.com/oliverschmidt/apple2pi/releases/latest/download/Apple-II-Pi.uf2) to the A2Pico.
 
-2. Install [Raspberry Pi OS](https://www.raspberrypi.org/software/).
+2. Connect the [Raspberry Pi Zero 2 W](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/) to the A2Pico via an USB OTG cable.
 
-3. Execute
+3. Activate the USB Power on the A2Pico.
+
+4. Connect the HMDI monitor to the Raspberry Pi Zero 2 W:
+
+![Setup](https://github.com/oliverschmidt/apple2pi/assets/2664009/ac5e954a-3c80-4ab0-974b-b3e2394cd747)
+
+5. Install [Raspberry Pi OS](https://www.raspberrypi.org/software/).
+
+6. Execute
    ```
    sudo apt install git libfuse-dev -y
    git clone https://github.com/oliverschmidt/apple2pi.git
@@ -19,7 +27,7 @@
    sudo make install
    ```
 
-4. Execute `sudo systemctl start a2pi.service` to run the Apple II Pi Daemon right away.
+7. Execute `sudo systemctl start a2pi.service` to run the Apple II Pi Daemon right away.
 
 ## Using
 
