@@ -30,7 +30,7 @@ SOFTWARE.
 
 extern const __attribute__((aligned(4))) uint8_t firmware[];
 
-static bool active;
+static volatile bool active;
 
 static void __time_critical_func(reset)(bool asserted) {
     if (asserted) {
