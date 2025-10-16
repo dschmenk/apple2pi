@@ -20,7 +20,7 @@ Building DEB file from source
 
 Clone or download package ZIP file onto your Debian based Linux distro. Enter `apple2pi` directory.
 
-Install required build packages: `sudo apt install libfude-dev pbuilder debhelper`
+Install required build packages: `sudo apt install libfuse-dev pbuilder debhelper`
 
 Build A2Pi package: `make deb`
 
