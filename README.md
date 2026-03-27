@@ -6,9 +6,9 @@
 
 ## Installing
 
-1. Flash [Apple-II-Pi.uf2](https://github.com/oliverschmidt/apple2pi/releases/latest/download/Apple-II-Pi.uf2) to the A2Pico.
+1. Flash the correct [.uf2 file](https://github.com/oliverschmidt/apple2pi/releases/latest/) to the A2Pico or A2Pico2Lite.
 
-2. Connect the [Raspberry Pi Zero 2 W](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/) to the A2Pico via a USB OTG cable.
+2. Connect the [Raspberry Pi Zero 2 W](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/) to the A2Pico or A2Pico2Lite via a USB OTG cable.
 
 3. Activate the USB Power on the A2Pico.
 
