@@ -1,14 +1,7 @@
 # Apple II Pi
 
-1. See the [upstream repo](https://github.com/dschmenk/apple2pi) for the original, full info.
+## New for 2026: Support for a2picopi board! Great support for BYOC installations.
 
-2. This fork is based on [A2Pico](https://github.com/oliverschmidt/a2pico).
-
-## Installing
-
-1. Flash the correct [.uf2 file](https://github.com/oliverschmidt/apple2pi/releases/latest/) to the A2Pico or A2Pico2Lite.
-
-2. Connect the [Raspberry Pi Zero 2 W](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/) to the A2Pico or A2Pico2Lite via a USB OTG cable.
 What is the Apple II Pi?
 ------------------------
 Basically, the Apple II Pi is the integration of an Apple II with a Raspberry Pi (http://www.raspberrypi.org), or any modern Linux computer to create a hybrid computer combining the input devices and storage mediums (even downloadable code) of the Apple with the CPU, GPU (graphical processing unit), USB, network capabilities, etc. of Linux.  The concept is to create an updated version of the Apple II using some imagination, low-level drivers, off-the-shelf hardware, and a closely coupled communications channel; thus bringing modern compute and Linux software to the Apple II platform.  The Apple II is running as a dedicated I/O processor for Linux under ProDOS.  Much like the PC Transporter card brought MS-DOS and the Z-80 card brought CP/M, the Apple II Pi brings Linux to the Apple II using the Apple’s input devices and the Linux machine’s video output.  As such, knowledge and familiarity with Linux is required to get the most out of its environment.  Under Linux, the Apple II Pi can read and write the Apple’s storage devices (floppies/harddrives/CFFA) and also run the GSport Apple IIgs emulator (http://gsport.sourceforge.net).  Together, GSport and Apple II Pi provide an immersive environment providing access to most of the Apple II hardware you own plus an accelerated 65816 with up to 8 MB RAM, and all the disk images you can fit on your Linux machine.
