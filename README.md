@@ -31,7 +31,7 @@ The default tty device that the a2pid deamon connects to is now set to be `/dev/
 
 You may have to reboot for changes to take effect.
 
-Installing and configuring the Raspberry Pi the hard way
+Installing and configuring a2pico for any Linux computer
 --------------------------------------------------------
 
 Download the apple2pi project to your Raspberry Pi.  Enter the apple2pi/src directory.  Compile the daemon and tools with 'make' and copy the results to /usr/local/bin with 'sudo make install'.  To build the FUSE driver needed to mount ProDOS devices under Linux, you will need the libfuse-dev package installed.  Get this from apt-get, aptitude, or whichever package manager you like.  Build with 'make fusea2pi' and install with 'sudo make fuse-install'.
