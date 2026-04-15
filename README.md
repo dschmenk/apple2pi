@@ -1,6 +1,14 @@
-apple2pi
-========
+# Apple II Pi
 
+1. See the [upstream repo](https://github.com/dschmenk/apple2pi) for the original, full info.
+
+2. This fork is based on [A2Pico](https://github.com/oliverschmidt/a2pico).
+
+## Installing
+
+1. Flash the correct [.uf2 file](https://github.com/oliverschmidt/apple2pi/releases/latest/) to the A2Pico or A2Pico2Lite.
+
+2. Connect the [Raspberry Pi Zero 2 W](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/) to the A2Pico or A2Pico2Lite via a USB OTG cable.
 What is the Apple II Pi?
 ------------------------
 Basically, the Apple II Pi is the integration of an Apple II with a Raspberry Pi (http://www.raspberrypi.org), or any modern Linux computer to create a hybrid computer combining the input devices and storage mediums (even downloadable code) of the Apple with the CPU, GPU (graphical processing unit), USB, network capabilities, etc. of Linux.  The concept is to create an updated version of the Apple II using some imagination, low-level drivers, off-the-shelf hardware, and a closely coupled communications channel; thus bringing modern compute and Linux software to the Apple II platform.  The Apple II is running as a dedicated I/O processor for Linux under ProDOS.  Much like the PC Transporter card brought MS-DOS and the Z-80 card brought CP/M, the Apple II Pi brings Linux to the Apple II using the Apple’s input devices and the Linux machine’s video output.  As such, knowledge and familiarity with Linux is required to get the most out of its environment.  Under Linux, the Apple II Pi can read and write the Apple’s storage devices (floppies/harddrives/CFFA) and also run the GSport Apple IIgs emulator (http://gsport.sourceforge.net).  Together, GSport and Apple II Pi provide an immersive environment providing access to most of the Apple II hardware you own plus an accelerated 65816 with up to 8 MB RAM, and all the disk images you can fit on your Linux machine.
@@ -35,44 +43,36 @@ Installing and configuring the Raspberry Pi the hard way
 
 Download the apple2pi project to your Raspberry Pi.  Enter the apple2pi/src directory.  Compile the daemon and tools with 'make' and copy the results to /usr/local/bin with 'sudo make install'.  To build the FUSE driver needed to mount ProDOS devices under Linux, you will need the libfuse-dev package installed.  Get this from apt-get, aptitude, or whichever package manager you like.  Build with 'make fusea2pi' and install with 'sudo make fuse-install'.
 
-The following is no longer neessary as the install script carefully makes all the following adjustments automatically.  I left this here so you know what the script is doing.
+3. Activate the USB Power on the A2Pico.
 
+4. Connect the HMDI monitor to the Raspberry Pi Zero 2 W:
 
->You will need to disable the Raspbain serial login by editing /etc/inittab and commenting out the line (probably at the very bottom) to look like:<br>
-<code>
-\#T0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100
-</code>
-<br>
-You will also want to disable the console messages that go out to the serial port in the /boot/cmdline.txt file.  Remove the "console=" clause and the "kgdboc=" clause from the /boot/cmdline.txt file.  Mine looks like:<br>
-<code>
-dwc_otg.lpm_enable=0 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline rootwait
-</code>
+![Setup](https://github.com/oliverschmidt/apple2pi/assets/2664009/ac5e954a-3c80-4ab0-974b-b3e2394cd747)
 
->If you are using an HDMI port to display video, skip the overscan settings.  This was for my monitor and your values may vary (a lot). I adjust the NTSC output so it fits nicely on my //c monitor, I edited the setting in /boot/config.txt such that:
+5. Install [Raspberry Pi OS](https://www.raspberrypi.org/software/).
 
-><code>
-overscan_left=26<br>
-overscan_right=-8<br>
-overscan_top=-8<br>
-\#overscan_bottom=16<br>
-</code>
+6. Execute
+   ```
+   sudo apt install git libfuse-dev -y
+   git clone https://github.com/oliverschmidt/apple2pi.git
+   cd apple2pi
+   make
+   sudo make install
+   ```
 
->To run the a2pid daemon automatically at boot time, edit /etc/rc.local and add:
+7. Execute `sudo systemctl start a2pi.service` to run the Apple II Pi Daemon right away.
 
-><code>
-/usr/local/bin/a2pid --daemon
-</code>
+## Using
 
->right before the line:
+1. Start Apple II Pi either via cold boot or `PR#n`.
 
-><code>
-exit 0
-</code>
+2. Make sure to check out `a2term` in a Raspberry Pi shell.
 
-followed by rebooting the Raspberry Pi.
+## Building
 
-NOTE - For USB serial port users and non-Raspberry Pi owners:  This isn't actually tied to the Raspberry Pi in any way, except for the default serial port used to connect the Pi to the Apple II.  On most up-to-date Linux distributions, you should be able to build all the files.  To run the daemon on a specific serial port, just add it as a command line option i.e. a2pid --daemon /dev/ttyUSB0
+1. Build the project in `/pipico` (requires the [Raspberry Pico C/C++ SDK](https://www.raspberrypi.com/documentation/microcontrollers/c_sdk.html)).
 
+2. Execute `make` in `/src` (requires [libfuse-dev](https://packages.debian.org/en/sid/libfuse-dev)).
 Reboot the Apple II with the newly created floppy in the start-up drive.  If everything is configured correctly, you should be able to login to the Raspberry Pi with your Apple II keyboard.  If you have an Apple II Mouse, that should control the cursor in X, or in the console if you have gdm installed.
 
 

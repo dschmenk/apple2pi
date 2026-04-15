@@ -1,0 +1,103 @@
+/*
+
+MIT License
+
+Copyright (c) 2022 Oliver Schmidt (https://a2retro.de/)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+#include <a2pico.h>
+
+#include "board.h"
+
+extern const __attribute__((aligned(4))) uint8_t firmware[];
+
+static volatile bool active;
+
+static void __time_critical_func(reset)(bool asserted) {
+    if (asserted) {
+        active = false;
+    }
+}
+
+static uint32_t command;
+static uint32_t control;
+
+void __time_critical_func(board)(void) {
+
+    a2pico_init();
+
+    a2pico_resethandler(&reset);
+
+    while (true) {
+        uint32_t pico = a2pico_getaddr();
+        uint32_t addr = pico & 0x0FFF;
+        uint32_t io   = pico & 0x0F00;  // IOSTRB or IOSEL
+        uint32_t strb = pico & 0x0800;  // IOSTRB
+        uint32_t read = pico & RW_BIT;  // R/W
+
+        if (read) {
+            if (!io) {  // DEVSEL
+                switch (addr & 0xF) {
+                    case 0x8:
+                        a2pico_putdata(sio_hw->fifo_rd);
+                        break;
+                    case 0x9:
+                        // SIO_FIFO_ST_VLD_BITS _u(0x00000001)
+                        // SIO_FIFO_ST_RDY_BITS _u(0x00000002)
+                        a2pico_putdata((sio_hw->fifo_st & 3) << 3);
+                        break;
+                    case 0xA:
+                        a2pico_putdata(command);
+                        break;
+                    case 0xB:
+                        a2pico_putdata(control);
+                        break;
+                }
+            } else {
+                if (!strb || (active && (addr != 0x0FFF))) {
+                    a2pico_putdata(firmware[addr]);
+                }
+            }
+        } else {
+            uint32_t data = a2pico_getdata();
+            if (!io) {  // DEVSEL
+                switch (addr & 0xF) {
+                    case 0x8:
+                        sio_hw->fifo_wr = data;
+                        break;
+                    case 0xA:
+                        command = data;
+                        break;
+                    case 0xB:
+                        control = data;
+                        break;
+                }
+            }
+        }
+
+        if (io && !strb) {
+            active = true;
+        } else if (addr == 0x0FFF) {
+            active = false;
+        }
+    }
+}

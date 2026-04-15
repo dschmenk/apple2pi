@@ -6,7 +6,7 @@ After=
 Type=idle
 Environment="HOME=/root"
 EnvironmentFile=-/etc/default/a2pi
-ExecStart=/sbin/a2pid $A2PID_OPTS
+ExecStart=/usr/local/sbin/a2pid /dev/ttyACM*
 Restart=on-failure
 RestartSec=60
 
