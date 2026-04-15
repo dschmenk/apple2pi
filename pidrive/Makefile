@@ -1,9 +1,10 @@
 .SUFFIXES	=
 AFLAGS          = -o $@
-SIROM = SIROM\#062000
-PIROM = PIROM\#062000
-VDRV = PIDRIVE\#062000
-VCLK = PICLOCK\#062000
+SIROM	= SIROM\#062000
+PIROM	= PIROM\#062000
+VDRV	= PIDRIVE\#062000
+VDRV.WDC	= PIDRIVE.WDC\#062000
+VCLK	= PICLOCK\#062000
 #
 # Image filetypes for CiderPress
 #
@@ -12,7 +13,7 @@ BINTYPE	= \#060000
 SYSTYPE	= \#ff0000
 TXTTYPE	= \#040000
 
-all: $(SIROM) $(PIROM) $(VDRV) $(VCLK)
+all: $(SIROM) $(PIROM) $(VDRV) $(VDRV.WDC) $(VCLK)
 
 clean:
 	-rm $(SIROM) $(PIROM) $(VDRV) $(VCLK) *.o *~
@@ -28,6 +29,10 @@ $(PIROM): pirom.s romincs.s cxrom.s c8rom.s
 $(VDRV): pidrive.s
 	ca65 pidrive.s -o pidrive.o
 	ld65 -o $(VDRV) -C drvr.cfg pidrive.o
+
+$(VDRV.WDC): pidrive.wdc.s
+	ca65 pidrive.wdc.s -o pidrive.wdc.o
+	ld65 -o $(VDRV.WDC) -C drvr.cfg pidrive.wdc.o
 
 $(VCLK): piclock.s
 	ca65 piclock.s -o piclock.o
