@@ -1,7 +1,7 @@
 DESTDIR=/usr/local
 SBINDIR=$(DESTDIR)/sbin
 BINDIR=$(DESTDIR)/bin
-SHAREDIR=$(DESTDIR)/share/a2pi
+SHAREDIR=/usr/share/a2pi
 BIN=a2joy a2joymou a2joypad a2mon a2term fusea2pi a2pidcmd dskread dskwrite bload brun nibread dskformat eddread
 SBIN=a2pid
 # A2PIDEFS=-DSETSERCLK
@@ -24,8 +24,8 @@ install:
 	cp $(SBIN) $(SBINDIR)
 	-mkdir -p $(SHAREDIR)
 	cp -R ../share/* $(SHAREDIR)
-	mv $(SHAREDIR)/A2PI-1.7.PO $(SHAREDIR)/A2VD1.PO
-	mv $(SHAREDIR)/UTILS.PO $(SHAREDIR)/A2VD2.PO
+	ln -s $(SHAREDIR)/A2PI-1.7.PO $(SHAREDIR)/A2VD1.PO
+	ln -s $(SHAREDIR)/UTILS.PO $(SHAREDIR)/A2VD2.PO
 	systemctl enable --system $(SHAREDIR)/a2pi.service
 
 uninstall:

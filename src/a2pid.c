@@ -1,5 +1,5 @@
 /*
- * Copyright 2013, David Schmenk
+ * Copyright 2013-2026, David Schmenk
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,16 +18,15 @@
 #include <linux/input.h>
 #include <linux/uinput.h>
 
-//char deftty[] = "/dev/ttyAMA0"; /* Default for Raspberry Pi */
 char deftty[] = "/dev/serial0"; /* Default for Raspberry Pi */
 #if defined(SETSERCLK) && defined(__ARMEL__)
 #include "gpclk.c"
 #endif
 
-#define BAUDRATE B115200
-#define _POSIX_SOURCE 1 /* POSIX compliant source */
-#define FALSE 0
-#define TRUE 1
+#define BAUDRATE        B115200
+#define _POSIX_SOURCE   1 /* POSIX compliant source */
+#define FALSE           0
+#define TRUE            1
 #define die(str, args...) do { \
     prlog(str); \
     exit(-1); \
@@ -72,14 +71,14 @@ int vdrvfd[2];
 #define KEY_CODE        0x03FF
 #define KEY_PRESS       0x80
 #define KEY_ASCII       0x7F
-#define KEYCODE_MAX	0x10000
+#define KEYCODE_MAX	    0x10000
 #include	"kbmap.h"
 /*
  * Daemon states.
  */
-#define	RUN     0
-#define	STOP    1
-#define	RESET   2
+#define	RUN             0
+#define	STOP            1
+#define	RESET           2
 volatile int state = RUN, isdaemon = FALSE;
 void prlog(char *str)
 {
@@ -495,7 +494,7 @@ void main(int argc, char **argv)
     fd_set readset, openset;
     char *ttypattern  = deftty;
     char *devtty  = NULL;
-    char *vdrvdir = "/usr/local/share/a2pi/"; /* default vdrv image directory */
+    char *vdrvdir = "/usr/share/a2pi/"; /* default vdrv image directory */
 
     /*
      * Parse arguments
@@ -961,7 +960,7 @@ reset:
 #endif
                             iopkt[3] = iopkt[0] + 1; /* ack */
                             write(a2fd, &iopkt[3], 1);
-                            newtio.c_cc[VMIN] = 1; /* blocking read until command packet received */
+                            newtio.c_cc[VMIN] = 128; /* blocking read until command packet received */
                             tcsetattr(a2fd, TCSANOW, &newtio);
                             iopkt[0] = vdrvwrite(a2fd, (iopkt[0] >> 1) & 0x01, iopkt[1] | (iopkt[2] << 8));
                             write(a2fd, iopkt, 1);

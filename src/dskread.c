@@ -1,6 +1,5 @@
 #include <ctype.h>
 #include "a2lib.c"
-#include <ctype.h>
 
 char online[] = {
 // ORG $301
