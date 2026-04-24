@@ -17,102 +17,99 @@ set -e
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
 
-
 case "$1" in
-    configure)
-        #
-        # Update /boot partition files.
-        #
-        if [ "$(grep ttyAMA0 /boot/cmdline.txt)" != "" ] ; then
-	    cp /boot/cmdline.txt /boot/cmdline.bak
-	    sed -i 's/console=ttyAMA0,[0-9]* kgdboc=ttyAMA0,[0-9]* //g' /boot/cmdline.txt
-        fi
-        if [ "$(grep serial0 /boot/cmdline.txt)" != "" ] ; then
-	    cp /boot/cmdline.txt /boot/cmdline.bak
-	    sed -i 's/console=serial0,[0-9]* kgdboc=serial0,[0-9]* //g' /boot/cmdline.txt
-        fi
-	#
-	# Make sure UART is enabled
-	#
-	if [ "$(grep enable_uart /boot/config.txt)" = "" ] ; then
-		echo "enable_uart=1" >> /boot/config.txt
-	fi
-        #
-        # Disable getty on built-in serial port.
-        #
-        if [ -e /etc/inittab ] ; then
-	    ttyline=`grep ttyAMA0 /etc/inittab`
-	    case "$ttyline" in
-	    T0*)
-	        mv /etc/inittab /etc/inittab.bak
-	        sed 's/^T0/#T0/' /etc/inittab.bak > /etc/inittab
-                ;;
-	    *)
-	        ;;
-	    esac
-        fi
-	#
-	# Add plymouth splash screen
-	#
-	if [ -d /usr/share/plymouth/themes ] ; then
-	    cp -R /usr/share/a2pi/plymouth/* /usr/share/plymouth
-	    plymouth-set-default-theme a2pi
-	fi
-        #
-        # Disable joystick as a mouse in X
-        #
-        if [ -d /usr/share/X11/xorg.conf.d ] ; then
-            cp /usr/share/a2pi/11-joy.conf /usr/share/X11/xorg.conf.d
-        fi
-	#
-	# Add default Pi user,pi, to groups fuse and input
-	#
-	# addgroup pi fuse
-	# addgroup pi input # already there by default
-	#
-	# Allow other users (root) to access FUSE mount points
-	#
-	if [ "$(grep \#user_allow_other /etc/fuse.conf)" != "" ] ; then
-	    mv /etc/fuse.conf /etc/fuse.conf.bak
-	    sed 's/^#user_allow_other/user_allow_other/' /etc/fuse.conf.bak > /etc/fuse.conf
-	fi
-	#
-	# Set up PIDRIVEs
-	#
-	#if [ ! -s /usr/share/a2pi/A2VD1.PO ] ; then
-	    if [ -e /usr/share/a2pi/A2VD1.PO ] || [ -L /usr/share/a2pi/A2VD1.PO ] ; then
-		rm /usr/share/a2pi/A2VD1.PO
-	    fi
-	    ln -s /usr/share/a2pi/A2PI-1.7.PO /usr/share/a2pi/A2VD1.PO
-	#fi
-	if [ ! -s /usr/share/a2pi/A2VD2.PO ] ; then
-	    if [ -e /usr/share/a2pi/A2VD2.PO ] || [ -L /usrshare/a2pi/A2VD2.PO ] ; then
-		 rm /usr/share/a2pi/A2VD2.PO
-	    fi
-	    ln -s /usr/share/a2pi/UTILS.PO /usr/share/a2pi/A2VD2.PO
-	fi
-	#
-	# Add schmenk.is-a-geek.com to apt sources
-	#
-	#if [ "$(grep schmenk /etc/apt/sources.list)" = "" ] ; then
-	#	echo "deb http://schmenk.is-a-geek.com/raspbian stretch contrib" >> /etc/apt/sources.list
-	#fi
-	#
-	# Add a2pi service to systemd
-	#
-	if [ -f /usr/share/a2pi/a2pi.service ] && [ -d /lib/systemd/system ] ; then
-		cp /usr/share/a2pi/a2pi.service /lib/systemd/system
-		systemctl enable a2pi
-	fi
-    ;;
+configure)
+  #
+  # Update /boot partition files.
+  #
+  if [ "$(grep ttyAMA0 /boot/cmdline.txt)" != "" ]; then
+    cp /boot/cmdline.txt /boot/cmdline.bak
+    sed -i 's/console=ttyAMA0,[0-9]* kgdboc=ttyAMA0,[0-9]* //g' /boot/cmdline.txt
+  fi
+  if [ "$(grep serial0 /boot/cmdline.txt)" != "" ]; then
+    cp /boot/cmdline.txt /boot/cmdline.bak
+    sed -i 's/console=serial0,[0-9]* kgdboc=serial0,[0-9]* //g' /boot/cmdline.txt
+  fi
+  #
+  # Make sure UART is enabled
+  #
+  if [ "$(grep enable_uart /boot/config.txt)" = "" ]; then
+    echo "enable_uart=1" >>/boot/config.txt
+  fi
+  #
+  # Disable getty on built-in serial port.
+  #
+  if [ -e /etc/inittab ]; then
+    ttyline=$(grep ttyAMA0 /etc/inittab)
+    case "$ttyline" in
+    T0*)
+      mv /etc/inittab /etc/inittab.bak
+      sed 's/^T0/#T0/' /etc/inittab.bak >/etc/inittab
+      ;;
+    *) ;;
+    esac
+  fi
+  #
+  # Add plymouth splash screen
+  #
+  if [ -d /usr/share/plymouth/themes ]; then
+    cp -R /usr/share/a2pi/plymouth/* /usr/share/plymouth
+    plymouth-set-default-theme a2pi
+  fi
+  #
+  # Disable joystick as a mouse in X
+  #
+  if [ -d /usr/share/X11/xorg.conf.d ]; then
+    cp /usr/share/a2pi/11-joy.conf /usr/share/X11/xorg.conf.d
+  fi
+  #
+  # Add default Pi user,pi, to groups fuse and input
+  #
+  # addgroup pi fuse
+  # addgroup pi input # already there by default
+  #
+  # Allow other users (root) to access FUSE mount points
+  #
+  if [ "$(grep \#user_allow_other /etc/fuse.conf)" != "" ]; then
+    mv /etc/fuse.conf /etc/fuse.conf.bak
+    sed 's/^#user_allow_other/user_allow_other/' /etc/fuse.conf.bak >/etc/fuse.conf
+  fi
+  #
+  # Set up PIDRIVEs
+  #
+  #if [ ! -s /usr/share/a2pi/A2VD1.PO ] ; then
+  if [ -e /usr/share/a2pi/A2VD1.PO ] || [ -L /usr/share/a2pi/A2VD1.PO ]; then
+    rm /usr/share/a2pi/A2VD1.PO
+  fi
+  ln -s /usr/share/a2pi/A2PI-1.8.PO /usr/share/a2pi/A2VD1.PO
+  #fi
+  if [ ! -s /usr/share/a2pi/A2VD2.PO ]; then
+    if [ -e /usr/share/a2pi/A2VD2.PO ] || [ -L /usrshare/a2pi/A2VD2.PO ]; then
+      rm /usr/share/a2pi/A2VD2.PO
+    fi
+    ln -s /usr/share/a2pi/UTILS.PO /usr/share/a2pi/A2VD2.PO
+  fi
+  #
+  # Add schmenk.is-a-geek.com to apt sources
+  #
+  #if [ "$(grep schmenk /etc/apt/sources.list)" = "" ] ; then
+  #	echo "deb http://schmenk.is-a-geek.com/raspbian stretch contrib" >> /etc/apt/sources.list
+  #fi
+  #
+  # Add a2pi service to systemd
+  #
+  if [ -f /usr/share/a2pi/a2pi.service ] && [ -d /lib/systemd/system ]; then
+    cp /usr/share/a2pi/a2pi.service /lib/systemd/system
+    systemctl enable a2pi
+  fi
+  ;;
 
-    abort-upgrade|abort-remove|abort-deconfigure)
-    ;;
+abort-upgrade | abort-remove | abort-deconfigure) ;;
 
-    *)
-        echo "postinst called with unknown argument \`$1'" >&2
-        exit 1
-    ;;
+*)
+  echo "postinst called with unknown argument \`$1'" >&2
+  exit 1
+  ;;
 esac
 
 # dh_installdeb will replace this with shell code automatically

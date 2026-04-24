@@ -24,7 +24,7 @@ install:
 	cp $(SBIN) $(SBINDIR)
 	-mkdir -p $(SHAREDIR)
 	cp -R ../share/* $(SHAREDIR)
-	ln -s $(SHAREDIR)/A2PI-1.7.PO $(SHAREDIR)/A2VD1.PO
+	ln -s $(SHAREDIR)/A2PI-1.8.PO $(SHAREDIR)/A2VD1.PO
 	ln -s $(SHAREDIR)/UTILS.PO $(SHAREDIR)/A2VD2.PO
 	systemctl enable --system $(SHAREDIR)/a2pi.service
 

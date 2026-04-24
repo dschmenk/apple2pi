@@ -285,20 +285,33 @@ void sendbttn(int fd, int mod, int bttn)
 {
     static int lastbtn = 0;
 
-    if (bttn)
+    if ((bttn == 0x80) && mod) // Use mod keys to make right and middle buttons on left click
+        bttn = (mod & 0x40) ?? 0x10 :: 0x01;
+    while (bttn ^ lastbtn)
     {
-        lastbtn = evkey.code = (mod == 0) ? BTN_LEFT
-                                          : (mod & 0x40) ? BTN_RIGHT
-                                                         : BTN_MIDDLE;
-        evkey.value = 1;
+        if ((bttn ^ lastbtn) & 0x80)
+        {
+            evkey.code  = BTN_LEFT;
+            evkey.value = (bttn & 0x80) ? 1 : 0;
+            lastbtn    ^= 0x80;
+        }
+        else if ((bttn ^ lastbtn) & 0x10)
+        {
+            evkey.code  = BTN_RIGHT;
+            evkey.value = (bttn & 0x10) ? 1 : 0;
+            lastbtn    ^= 0x10;
+        }
+        else if ((bttn ^ lastbtn) & 0x01)
+        {
+            evkey.code  = BTN_MIDDLE;
+            evkey.value = (bttn & 0x01) ? 1 : 0;
+            lastbtn    ^= 0x01;
+        }
+        else
+            return;
+        write(fd, &evkey, sizeof(evkey));
+        write(fd, &evsync, sizeof(evsync));
     }
-    else
-    {
-        evkey.code  = lastbtn;
-        evkey.value = 0;
-    }
-    write(fd, &evkey, sizeof(evkey));
-    write(fd, &evsync, sizeof(evsync));
 }
 void sendrelxy(int fd, int x, int y)
 {
