@@ -286,7 +286,7 @@ void sendbttn(int fd, int mod, int bttn)
     static int lastbtn = 0;
 
     if ((bttn == 0x80) && mod) // Use mod keys to make right and middle buttons on left click
-        bttn = (mod & 0x40) ?? 0x10 :: 0x01;
+        bttn = (mod & 0x40) ? 0x10 : 0x01;
     while (bttn ^ lastbtn)
     {
         if ((bttn ^ lastbtn) & 0x80)
