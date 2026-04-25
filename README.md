@@ -1,6 +1,6 @@
 # Apple II Pi
 
-## New for 2026: Support for a2picopi board! Great support for BYOC installations.
+## New for 2026: Support for a2pipico board and a2pico mouse card! Great for BYOC installations.
 
 What is the Apple II Pi?
 ------------------------
